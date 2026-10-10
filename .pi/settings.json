@@ -1,0 +1,5 @@
+{
+  "defaultTools": ["+grep", "+find", "+ls", "+codemode", "+tool_search"],
+  "hideThinkingBlock": true,
+  "showCacheMissNotices": true
+}
