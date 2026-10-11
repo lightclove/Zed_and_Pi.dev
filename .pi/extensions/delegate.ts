@@ -30,7 +30,35 @@ const delegateTool = defineTool({
   }),
 
   async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-    const modelId = params.model === "deepseek-v4-pro" ? "deepseek-v4-pro" : "deepseek-flash";
+    // Hamilton: detect errors at the boundary — never silently coerce invalid input.
+    const task = params.task.trim();
+    if (!task) {
+      return {
+        content: [{ type: "text", text: "delegate: task must not be empty" }],
+        details: { error: "empty-task" },
+        isError: true,
+      };
+    }
+    if (!params.role.trim()) {
+      return {
+        content: [{ type: "text", text: "delegate: role must not be empty" }],
+        details: { error: "empty-role" },
+        isError: true,
+      };
+    }
+    const modelId = params.model ?? "deepseek-flash";
+    if (modelId !== "deepseek-flash" && modelId !== "deepseek-v4-pro") {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `delegate: unknown model "${params.model}" (use deepseek-flash or deepseek-v4-pro)`,
+          },
+        ],
+        details: { error: "invalid-model", model: params.model },
+        isError: true,
+      };
+    }
     const model = ctx.modelRegistry.find("deepseek", modelId);
     if (!model) {
       return {
@@ -48,7 +76,7 @@ const delegateTool = defineTool({
         model,
         {
           systemPrompt: params.role,
-          messages: [{ role: "user", content: params.task, timestamp: Date.now() }],
+          messages: [{ role: "user", content: task, timestamp: Date.now() }],
         },
         { reasoning, maxTokens: 8_000, signal },
       );
@@ -69,9 +97,23 @@ const delegateTool = defineTool({
         };
       }
 
+      if (message.stopReason === "aborted") {
+        return {
+          content: [{ type: "text", text: "delegate aborted" }],
+          details: { error: "aborted", modelId },
+          isError: true,
+          usage: message.usage,
+        };
+      }
+
+      // Akin 2: operate when things go wrong — a truncated answer must never pass as complete.
+      const truncated = message.stopReason === "length";
+      const prefix = truncated
+        ? "⚠ delegate: answer truncated (maxTokens) — treat as incomplete, re-ask with a narrower task.\n\n"
+        : "";
       return {
-        content: [{ type: "text", text: text || "(empty response)" }],
-        details: { modelId, stopReason: message.stopReason },
+        content: [{ type: "text", text: prefix + (text || "(empty response)") }],
+        details: { modelId, stopReason: message.stopReason, truncated },
         usage: message.usage,
       };
     } catch (error) {

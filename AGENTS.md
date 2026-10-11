@@ -8,6 +8,24 @@
 - Run cheap, fast checks (typecheck, one failing test) before running the full suite.
 - One logical change per turn. Commit working states frequently.
 
+## Engineering principles (Hamilton + Akin)
+
+Full set + source quotes: skill `engineering-principles` (`.pi/skills/engineering-principles/`).
+
+- **Detect errors at the earliest possible point** (Hamilton): cheap checks before expensive
+  ones; validate inputs at every boundary — never silently default or coerce on invalid input.
+- **Design to operate when some things are wrong** (Akin 2): every delegated call needs an
+  error path; failures, truncation, and aborts must be reported loudly, never passed off as success.
+- **Numbers, not opinions** (Akin 1): decisions are backed by measurements (`pi-cost`, usage,
+  test results). Estimates are allowed only if marked as such and revisited (Akin 10).
+- **Errors migrate to interfaces** (Hamilton, Shea 15): define the contract before the
+  implementation; validate at the boundary.
+- **Don't build better than requirements dictate** (Akin 13/14): YAGNI; "better" is the enemy
+  of "good" — ship when checks pass.
+- **Verify extraordinary claims** (Akin 19): sanity-check sub-agent/model answers before
+  passing them through; previous analysis is not truth (Akin 16).
+- **When in doubt, document** (Akin 22): record decisions, assumptions, and numbers.
+
 ## Model usage (DeepSeek)
 
 - `deepseek-flash` is the default workhorse: cheapest input/output and automatic context caching.

@@ -305,11 +305,12 @@ Zed у тебя настроен на `deepseek-chat` / `deepseek-reasoner` (к�
 AGENTS.md                         ← конвенции + правила token-economy
 .pi/settings.json                 ← +grep/find/ls, +codemode, +tool_search, hideThinkingBlock, кэш-нотисы
 .pi/extensions/deepseek-router.ts ← виртуальная модель deepseek/auto (flash↔pro)
-.pi/extensions/delegate.ts        ← инструмент delegate (изолированные субагенты)
-.pi/prompts/plan.md               ← /plan
-.pi/prompts/review.md             ← /review
-.pi/prompts/ship.md               ← /ship
+.pi/extensions/delegate.ts        ← инструмент delegate (изолированные субагенты, валидация на границе, флаги обрыва/аборта)
+.pi/prompts/plan.md               ← /plan (+ гейты Гамильтон/Акин)
+.pi/prompts/review.md             ← /review (+ гейты Гамильтон/Акин)
+.pi/prompts/ship.md               ← /ship (+ numbers gate, Акин 1/26)
 .pi/skills/code-review/           ← skill code-review (+ references/checklist.md)
+.pi/skills/engineering-principles/ ← skill: принципы Гамильтон + законы Акина (+ references/)
 ```
 
 При первом запуске `pi` в папке — подтверди trust, затем `/reload`.
@@ -410,6 +411,20 @@ export default function (pi: ExtensionAPI) { pi.registerTool(delegateTool); }
 
 Ключевые идеи кода: `ctx.modelRegistry.find` → модель; `streamSimple` + `await stream.result()` → финальный
 `AssistantMessage`; `usage` пробрасывается в результат, чтобы сессия корректно считала стоимость субагента.
+
+### 7.3 Инженерные принципы (Гамильтон + Акин)
+
+В harness вшиты принципы Маргарет Гамильтон (Apollo: ошибки ловятся на самой ранней стадии, система
+работает, когда что-то сломано, ошибки мигрируют к интерфейсам) и законы Акина (инженерия — это числа,
+Shea: улучшения — на интерфейсах, «better — враг good», YAGNI и т.д.):
+
+- **Skill `engineering-principles`** — полный свод (H1–H5, A1–A29) + reference-файлы с цитатами;
+  загружается, когда агент планирует архитектуру, проектирует интерфейсы или гейтит изменение.
+- **AGENTS.md** — 7 всегда-в-контексте правил (fail early, error paths, числа вместо мнений, YAGNI, …).
+- **Промпты** — `/plan` (допущения, дешёвые проверки, альтернативы), `/review` (гейты H1/H3/A2/A16/A19),
+  `/ship` (numbers gate: тесты/типчек/стоимость, затем финальный sanity-проход — Акин 26).
+- **`delegate.ts`** — код, следующий принципам: валидация параметров на границе вместо тихого дефолта
+  (Гамильтон), явная ошибка при обрыве/аборте вместо «(empty response)» (Акин 2).
 
 ---
 
