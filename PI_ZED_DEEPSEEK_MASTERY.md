@@ -557,6 +557,32 @@ pi mcp list          # проверка
 `toolExposure` переопределяет exposure для отдельных инструментов (ключи = имена, `*` — wildcard).
 Инструменты именуются `mcp__<server>__<tool>`. Внутри сессии — `/mcp` (статус, sign-in, exposure).
 
+### 9.1 Serena — MCP + LSP в одном (сделано в этом проекте)
+
+Serena = MCP-сервер, который даёт **семантические** инструменты кода (символы, ссылки, определения,
+поиск, безопасный rename) через language servers (**LSP**). Готовая заготовка — `templates/mcp-serena/`
+(README с шагами переноса в любой `~/Work`-проект). Живая копия: `.pi/mcp.json` + `.serena/project.yml`.
+
+```jsonc
+// .pi/mcp.json
+{ "mcpServers": { "serena": {
+    "command": "uvx",
+    "args": ["--from", "serena-agent", "serena", "start-mcp-server", "--context", "ide", "--project-from-cwd"],
+    "description": "LSP-based semantic code tools: symbols, references, definitions, code search.",
+    "exposure": "deferred",
+    "env": { "PYTHONUTF8": "1" }   // cp1251-Windows: форсируем UTF-8 в stdio
+} } }
+```
+
+- **`--context ide`** — pi уже имеет read/edit/grep/find, поэтому Serena режется до 22 семантических +
+  memory-инструментов (без дублей). Для голого клиента — `claude-code`/`agent`.
+- **`--project-from-cwd`** — pi запускает stdio-сервер из корня проекта, Serena сама находит ближайший
+  `.serena/project.yml` (без хардкода путей).
+- **`.serena/project.yml`** — список `language_servers` (typescript/markdown/yaml/json для этого репо;
+  полный список языков — в docs Serena). `project.local.yml` и `logs/`/`memories/` — в `.gitignore`.
+- **Проверка:** `pi mcp list` (→ `serena: connected, 22 tools`) и
+  `uvx --from serena-agent serena project health-check .` (LSP + symbol-инструменты).
+
 ---
 
 ## 10. Справочник: команды и хоткеи
@@ -647,6 +673,8 @@ Zed — его сила в скорости редактирования и ре
 ### 11.1 Конфиг
 
 - Каталог: `C:\Users\admin\AppData\Roaming\Zed\` (`settings.json`, `keymap.json`).
+- **Проектный уровень:** `.zed/settings.json` в корне репо (перекрывает global для этого проекта; создаётся
+  через `zed: open project settings`). LSP-заготовка — `templates/zed-lsp/`.
 - Открыть: `zed: open settings`, `zed: open keymap` (путь руками искать не надо).
 - `keymap.json` — **массив** объектов `[{ "context": "...", "bindings": {...} }]`.
 
@@ -684,6 +712,32 @@ Zed имеет свой Agent Panel (у тебя — на `deepseek-reasoner`). 
 
 - **Zed-агент** — быстрые локальные правки прямо в буфере (держи на дешёвой модели `deepseek-chat`).
 - **pi-агент** — оркестрация, многошаговые задачи, токен-экономия, субагенты.
+
+### 11.5 Zed LSP (project-level, сделано в этом проекте)
+
+Zed сам детектит и скачивает language servers; конфиг LSP нужен, чтобы **зафиксировать** серверы,
+включить inlay-hints и выровнять форматирование под репо. Живёт в `.zed/settings.json` (корень),
+заготовка — `templates/zed-lsp/` (README с переносом).
+
+```jsonc
+// .zed/settings.json
+{
+  "format_on_save": "on",
+  "languages": {
+    "TypeScript": { "language_servers": ["vtsls", "..."], "tab_size": 2 },
+    "JavaScript": { "language_servers": ["vtsls", "..."], "tab_size": 2 }
+  },
+  "inlay_hints": { "enabled": true, "show_type_hints": true }
+}
+```
+
+- **`vtsls`** — дефолтный TS/JS-сервер Zed (скачивается сам, без npm); `"..."` оставляет остальные
+  дефолты, `"!name"` — исключает. Per-server настройки — под top-level `"lsp": { "<server>": {...} }`.
+- **Inlay hints** (type/parameter/value) выключены по умолчанию — включаются здесь или глобально (личная
+  привычка → global).
+- **LSP-хоткеи** уже есть из `base_keymap: VSCode`: `F12` определение, `Shift+F12` ссылки, `F2` rename,
+  `Ctrl+.` code actions — правки в keymap.json не нужны.
+- **Не всё работает на проектом уровне** (theme/vim_mode/base_keymap — только global).
 
 ---
 
@@ -1128,6 +1182,8 @@ cp "$SRC/prompts/"*.md ~/.pi/agent/prompts/
 | `code-review`, `engineering-principles` | `.pi/skills/` | **global**: `~/.pi/agent/skills/` | типовая экспертиза; reference-пути относительны skill-директории → копии работают как есть |
 | `defaultTools`, `hideThinkingBlock`, `showCacheMissNotices` | `.pi/settings.json` (проект) | **global**: `~/.pi/agent/settings.json` | тогда новый проект = **ноль конфига** |
 | `tools/pi-cost/` | проект | проект: **junction** на канон | один файл-источник, без копий |
+| MCP+LSP (Serena): `templates/mcp-serena/` | проект (этот) | **шаблон**: копировать `.pi/mcp.json` + `.serena/project.yml` в каждый проект | `language_servers`/`project_name` уникальны для репо; `--project-from-cwd` делает mcp-запись переносимой без правок |
+| Zed LSP: `templates/zed-lsp/` | проект (этот) | **шаблон**: копировать `.zed/settings.json` в каждый проект | `languages`/`tab_size` уникальны для репо; keymap.json — только global |
 | `PI_ZED_DEEPSEEK_MASTERY.md` | проект | **остаётся здесь** | знание-база; в новые проекты не копируется |
 
 Почему так: (1) **токены** — AGENTS.md и описания инструментов/скиллов грузятся в каждый сеанс,
@@ -1191,7 +1247,11 @@ mkdir ~/Work/myproj && cd ~/Work/myproj && git init
 # 3. pi-cost — junction на канон вместо копии (Windows, cmd):
 cmd //c "mklink /J C:\Users\admin\Work\myproj\tools\pi-cost C:\Users\admin\Work\Zed_and_Pi.dev\tools\pi-cost"
 #    (предварительно mkdir tools в новом проекте; альтернатива — git subtree)
-# 4. запустить pi в папке → подтвердить trust → /reload
+# 4. MCP+LSP (Serena): скопировать templates/mcp-serena/{mcp.serena.json,serena.project.yml}
+#    → .pi/mcp.json и .serena/project.yml; поправить project_name + language_servers
+# 5. Zed LSP: скопировать templates/zed-lsp/settings.json → .zed/settings.json;
+#    поправить languages + tab_size под репо
+# 6. запустить pi в папке → подтвердить trust → /reload
 ```
 
 Проверка переноса — числами, не мнениями (Акин 1):

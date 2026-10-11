@@ -1,0 +1,43 @@
+// Zed LSP scaffold — copy to .zed/settings.json and edit.
+// Project-level settings override the global ~/AppData/Roaming/Zed/settings.json.
+// Docs: https://zed.dev/docs/configuring-zed#project-settings
+{
+  "format_on_save": "on",
+
+  // --- LSP: per-language-server overrides ---------------------------------
+  // Zed auto-downloads language servers. `lsp.<server>` overrides launch
+  // (binary path/args) and passes `settings` / `initialization_options`.
+  // "lsp": {
+  //   "vtsls": {
+  //     "settings": {
+  //       "typescript": { "preferences": { "importModuleSpecifier": "non-relative" } }
+  //     }
+  //   }
+  // },
+
+  // --- Per-language overrides ---------------------------------------------
+  // "..." keeps Zed's remaining default servers; prefix "!" to exclude one.
+  // Add more entries per project's languages (see table in README.md).
+  "languages": {
+    "TypeScript": {
+      "language_servers": ["vtsls", "..."],
+      "tab_size": 2,
+      "format_on_save": "on"
+    },
+    "JavaScript": {
+      "language_servers": ["vtsls", "..."],
+      "tab_size": 2,
+      "format_on_save": "on"
+    }
+  },
+
+  // --- LSP inlay hints (type/parameter/value hints from the language server) ---
+  "inlay_hints": {
+    "enabled": true,
+    "show_type_hints": true,
+    "show_parameter_hints": false,
+    "show_value_hints": false,
+    "show_other_hints": true,
+    "show_background": false
+  }
+}
