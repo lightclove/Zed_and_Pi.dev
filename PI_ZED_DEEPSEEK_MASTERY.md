@@ -23,6 +23,7 @@
 15. [Дорожная карта освоения](#15-дорожная-карта-освоения)
 16. [Практика 2026-10-11: субагенты, стоимость, настройки](#16-практика-2026-10-11-субагенты-стоимость-настройки)
 17. [Перенос опыта в другие проекты (~/Work)](#17-перенос-опыта-в-другие-проекты-work)
+18. [Практика: MCP + LSP заготовки (Serena, Playwright, PostgreSQL, Zed)](#18-практика-mcp--lsp-заготовки-serena-playwright-postgresql-zed)
 
 ---
 
@@ -36,6 +37,7 @@
 | Shell-инструмент `bash` | ✅ работает (Git Bash установлен) |
 | Zed | ✅ конфиг в `C:\Users\admin\AppData\Roaming\Zed\` (`settings.json`, `keymap.json`) |
 | Zed-агент | настроен на `deepseek-reasoner` (дорогая reasoning-модель) |
+| MCP + LSP | ✅ Serena (22 инстр.) + Playwright (31) в `.pi/mcp.json`; Postgres — `enabled:false` (ждёт базу); Zed LSP — `.zed/settings.json` (vtsls); шаблоны `templates/` |
 
 ### Критический фикс №1 — Git Bash
 
@@ -1317,4 +1319,98 @@ node tools/pi-cost/pi-cost.mjs --last 1                   # стоимость �
 `sessions/`, `auth.json`, `trust.json`, `models-store.json` — машинно-специфичны (токены, доверие,
 история). Никогда не копируй `~/.pi/agent` целиком и не коммить `auth.json` (гигиена, §Hygiene в
 AGENTS.md).
+
+---
+
+## 18. Практика: MCP + LSP заготовки (Serena, Playwright, PostgreSQL, Zed)
+
+Опыт сессии 2026-10-11: настройка MCP (Serena, Playwright, PostgreSQL) и LSP (Serena-бэкенд, Zed) с
+созданием переносимых заготовок. Ниже — что реально сделано, какие грабли, и какие правила
+подтвердились.
+
+### 18.1 Методология: сначала первоисточник, потом конфиг
+
+Порядок работы, который сработал (и который стоит повторять):
+
+1. **Разведать** текущее состояние (`ls ~/.pi/agent`, `.pi/mcp.json`, Zed settings).
+2. **Не изобретать ключи.** Схему брать из первоисточника, а не по памяти:
+   - pi MCP → `docs/mcp.md` в установке;
+   - Zed → `assets/settings/default.json` в репо `zed-industries/zed` (там все ключи с комментариями);
+   - Serena → `uvx --from serena-agent serena <cmd> --help` и её docs.
+3. **Сконфигурировать → проверить реальным подключением** (`pi mcp list` — показывает tool count и
+   ошибки), а не только парсингом JSON.
+4. **Оформить шаблон** в `templates/`, обновить мастер-гайд, закоммитить.
+
+Правило: «ключ, которого я не видел в схеме/help — не пишу». Это дешевле отладки битого конфига.
+
+### 18.2 Серена: MCP + LSP в одном
+
+- **Пакет ≠ команда.** PyPI-пакет `serena-agent`, а entrypoint — `serena`:
+  `uvx --from serena-agent serena start-mcp-server`. Без `--from` uvx не найдёт нужный бинарь.
+- **`--context ide`** для терминальных агентов (pi): даёт 22 семантических + memory-инструмента
+  (`find_symbol`, `find_referencing_symbols`, `get_symbols_overview`, `search_for_pattern`, ...) вместо
+  ~40 — pi уже имеет read/edit/grep/find, дублировать их через Serena не нужно.
+- **`--project-from-cwd`** — pi запускает stdio-сервер из корня проекта, Serena сама находит ближайший
+  `.serena/project.yml`; запись переносится в любой проект без правок.
+- **LSP-бэкенд** живёт в `.serena/project.yml` (`language_servers`); Serena качает нужные LS сама.
+  Проверка: `serena project health-check .` (реально запускает LS и дёргает symbol-инструменты).
+- **`exposure: deferred`** — 22-40 инструментов не раздувают базовый промпт, подгружаются через
+  `tool_search`/`searchTools()` по запросу (docs: deferred — для больших серверов).
+
+### 18.3 Подводные камни (главное)
+
+- **cp1251-Windows и эмодзи.** Python на русской локали пишет в консоль в cp1251; `serena project
+  health-check` печатал «✅ Health check passed» и падал `UnicodeEncodeError` — **exit 1 при реальном
+  успехе**. Вывод: не верить коду возврата слепо, читать текст (Hamilton — ошибка соврала бы в обе
+  стороны). Лечится `env: { "PYTHONUTF8": "1" }` для MCP-сервера (форсирует UTF-8 stdio).
+- **Playwright MCP по умолчанию headed** («headed by default» в `--help`) — на каждый запуск открылось
+  бы окно браузера. Нужен явный `--headless`. Плюс `--caps vision` (модель получает скриншоты),
+  `--output-dir .playwright-mcp` (скриншоты в репо → gitignore), `--file-paths relative`.
+- **SQL-LSP не существует** — ни в Zed (там только грамматика SQL-расширения), ни в Serena (нет SQL
+  backend). Поэтому «LSP для PostgreSQL» — это честно **не LSP**, а семантический слой Postgres MCP
+  (схема/запросы) + внешний `sql-formatter` (dialect `postgresql`) для форматирования в Zed.
+- **Не подключать сервер, который заведомо не подключится.** Локально нет ни psql, ни docker, ни
+  `DATABASE_URL` → Postgres MCP стоит с `"enabled": false` (в `pi mcp list` виден как `disabled`).
+  Сервер, падающий при каждом старте, — шум, а не безопасность; включается одной командой в `/mcp`,
+  когда база появится (Акин 2: система работает, когда часть сломана).
+- **Секреты — только через env.** Строка подключения в `${DATABASE_URL}` (pi раскрывает `${VAR}` в
+  `env`), в репозитории — только имя переменной. Никогда не коммитить connection string.
+- **Zed project settings — не всё проетно.** `.zed/settings.json` перекрывает global, но `theme`,
+  `vim_mode`, `base_keymap` работают только в user settings. `keymap.json` вообще только global
+  (проектного keymap нет).
+- **Git: `git mv` + `git commit` без путей коммитит весь индекс.** Staged-rename уехал в «чужой»
+  коммит. Лечится `git reset --soft <base>` + путь-скоупные коммиты (безопасно, пока не запушено).
+  Вывод: перед коммитом — `git status`, и коммитить явными путями.
+
+### 18.4 Числа (Акин 1: не верить, а измерять)
+
+| Проверка | Результат |
+|---|---|
+| `pi mcp list` | `serena: connected, 22 tools`, `playwright: connected, 31 tools`, `postgres: disabled`, exit 0 |
+| `serena project health-check .` | LS typescript/markdown/yaml/json стартуют, symbol-инструменты отвечают |
+| JSON/JSONC конфигов | все парсятся |
+
+Стоимость настройки на flash/low — единицы центов; ценность — в переиспользуемых шаблонах.
+
+### 18.5 Дизайн заготовок
+
+- **Живая копия** в корне: `.pi/mcp.json`, `.serena/project.yml`, `.zed/settings.json`. Они уникальны
+  для репо и версионируются.
+- **`templates/`** — то, что копируется в новые `~/Work`-проекты:
+  - `templates/mcp/` — один `mcp.json` (serena + playwright + postgres) + `serena.project.yml` +
+    README с таблицей «что готово когда» и LSP-маппингом (консолидировано из `mcp-serena/`);
+  - `templates/zed-lsp/` — `settings.json` с активным TS-блоком и готовыми (закомментированными)
+    блоками Python / Rust / SQL + README с таблицей language servers.
+- **Машинно-специфичное** (`.serena/project.local.yml`, `memories/`, `logs/`, `.playwright-mcp/`) — в
+  `.gitignore`.
+
+### 18.6 Вывод: подтверждённые принципы
+
+- **Ловить ошибки как можно раньше** (Hamilton): `pi mcp list` и `serena health-check` — дешёвая
+  проверка *до* коммита, а не «в бою».
+- **Числа вместо мнений** (Акин 1): tool count, exit code, health-check — критерий готовности.
+- **Не строить лучше, чем требуют обстоятельства** (Акин 13/14): три сервера по отдельности, а не
+  один «универсальный»; `enabled:false` для Postgres вместо реальной инфраструктуры БД.
+- **Когда сомневаешься — документируй** (Акин 22): этот раздел, README шаблонов и §9/§11.
+- **Проверять факты по первоисточнику** (Акин 16): схема Zed и `--help` серверов, а не память.
 
