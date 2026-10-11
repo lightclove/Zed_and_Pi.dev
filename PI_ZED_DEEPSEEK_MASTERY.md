@@ -21,6 +21,7 @@
 13. [Cheat sheet](#13-cheat-sheet)
 14. [Переход с GUI на pi: базовая работа в терминале](#14-переход-с-gui-на-pi-базовая-работа-в-терминале)
 15. [Дорожная карта освоения](#15-дорожная-карта-освоения)
+16. [Практика 2026-10-11: субагенты, стоимость, настройки](#16-практика-2026-10-11-субагенты-стоимость-настройки)
 
 ---
 
@@ -28,10 +29,10 @@
 
 | Факт | Статус |
 |---|---|
-| pi | ✅ установлен, **v1.0.0** (npm `@earendil-works/pi-coding-agent`, требует Node ≥ 22.19) |
-| DeepSeek | ✅ подключён: `~/.pi/agent/settings.json` → `defaultProvider: "deepseek"`, `defaultModel: "deepseek-v4-pro"` |
+| pi | ✅ установлен, **v1.1.0** (релизы 0.87.1 → 1.1.0 в `~/.pi/agent/install/releases/`) |
+| DeepSeek | ✅ подключён: `~/.pi/agent/settings.json` → `defaultModel: "deepseek-flash"`, `defaultThinkingLevel: "low"` |
 | Ключ DeepSeek | env-переменная `DEEPSEEK_API_KEY` (или `/login deepseek`) |
-| Shell-инструмент `bash` | ❌ **не работает**: `bash.exe` резолвится в заглушку WSL (WSL не установлен) |
+| Shell-инструмент `bash` | ✅ работает (Git Bash установлен) |
 | Zed | ✅ конфиг в `C:\Users\admin\AppData\Roaming\Zed\` (`settings.json`, `keymap.json`) |
 | Zed-агент | настроен на `deepseek-reasoner` (дорогая reasoning-модель) |
 
@@ -956,7 +957,7 @@ Chat History): начни печатать — список фильтруетс
    Найди, где промахи кэша и где лишние reasoning-токены.
 6. **Собери своих специалистов:** добавь skills (`test-writer`, `db-reviewer`, `devops`) и шаблоны под
    свой стек. Прочитай `docs/skills.md`, `docs/prompt-templates.md`.
-7. **Включи субагентов:** попробуй `delegate` для параллельного ревью/исследования.
+7. **Включи субагентов:** расширение `subagent` установлено (см. раздел 16) + `delegate` для параллельного ревью/исследования.
 8. **Подключи MCP:** GitHub / filesystem / твоя БД. Прочитай `docs/mcp.md`.
 9. **Напиши первое расширение:** permission-gate (`tool_call` + hints) или todo-подобный инструмент.
    Примеры: `examples/extensions/` в установке pi (`hello.ts`, `todo.ts`, `jev-router.ts`).
@@ -966,3 +967,125 @@ Chat History): начни печатать — список фильтруетс
 `how-pi-works.md`, `models.md`, `settings.md`, `skills.md`, `extensions.md`, `virtual-models.md`,
 `codemode.md`, `mcp.md`, `cli.md`, `keybindings.md`, `windows.md`, `sessions.md`, `compaction.md`,
 `packages.md`, `sdk.md`, `rpc.md`.
+
+---
+
+## 16. Практика 2026-10-11: субагенты, стоимость, настройки
+
+Опыт сессии: разбор настроек pi 1.1.0, контроль стоимости, установка субагентов. Всё проверено
+на практике, а не по докам.
+
+### 16.1 Контроль стоимости
+
+- **Встроенный учёт:** footer TUI показывает накопленный usage и cost за сессию (то, что в omp-форке
+  подаётся как фича — в pi это есть из коробки). `/session` — файл, число сообщений, токены, стоимость
+  текущей сессии.
+- **`tools/pi-cost/pi-cost.mjs`** — агрегат по всем сессиям `~/.pi/agent/sessions` (JSONL). Считает все
+  ветки (реальный расход), cache-hit = `cacheRead / (input + cacheRead)`.
+  - Флаги: `--today` — только сегодня; `--last N` — за N дней; `--top N` — топ по стоимости; `--json`.
+  - Пример: `node tools/pi-cost/pi-cost.mjs --last 7 --top 5`.
+- **Реальная статистика (2026-10):** 317 вызовов / $3.26. v4-pro: $3.05 за 289 вызовов (93% бюджета),
+  flash: $0.21 за 28 вызовов. Cache-hit 92% — префикс-кэш DeepSeek работает.
+- **Токены субагентов добавляются к счёту сессии** — каждый вызов `subagent` = отдельный процесс pi
+  со своим usage.
+
+### 16.2 Модели: переключение и эскалация
+
+- `/model` (Ctrl+L) — выбор; **Ctrl+S на модели сохраняет её дефолтом** (перезаписывает `defaultModel`
+  в settings.json).
+- `/thinking` (Shift+Tab) — уровень; Ctrl+S сохраняет стартовый уровень.
+- `Ctrl+P` — цикл по моделям; `/scoped-models` — состав цикла.
+- Правило эскалации (DeepSeek): рутина — `deepseek-flash` + `low`; сложная архитектура / хитрый баг /
+  безопасность — `deepseek-v4-pro` + поднять thinking. Статистика подтверждает: рутину держать на flash.
+- Смена модели/уровня записывается в сессию; `/resume` восстанавливает их, не трогая дефолты.
+
+### 16.3 settings.json (pi 1.1.0): что стоит и что значит
+
+Актуальный `~/.pi/agent/settings.json`:
+
+```json
+{
+  "theme": "dark",
+  "defaultModel": "deepseek-flash",
+  "defaultThinkingLevel": "low",
+  "showCacheMissNotices": true,
+  "defaultTools": ["+bash", "+grep", "+find", "+ls", "+codemode", "+tool_search"]
+}
+```
+
+- Записи `+name` в `defaultTools` — **аддитивные**: добавляются к дефолту `read, bash, edit, write`.
+  Итоговый набор: read, bash, edit, write, grep, find, ls, codemode, tool_search. Plain-имя без `+` —
+  заменяет весь набор.
+- `defaultThinkingLevel: "low"` (дефолт pi — `"medium"`) — экономия reasoning-токенов.
+- Проектные настройки `.pi/settings.json` переопределяют пользовательские (в этом репо — доп. tools +
+  `hideThinkingBlock`).
+- Полезные ключи (полный список — `docs/settings.md`):
+  - `modelThinkingLevels: {"provider/model": "high"}` — свой стартовый уровень на модель.
+  - `enabledModels` — паттерны для стартового выбора и Ctrl+P-цикла.
+  - `cacheWarming: "off" | "streaming" | "idle"` — прогрев кэша; при hit% 92% выгода спорная.
+  - `hideThinkingBlock`, `compaction.*`, `branchSummary.*`, `quietStartup`, `theme`, `sessionDir`.
+- `/settings` — TUI-редактор частых опций; `pi config` — интерактивный TUI по ресурсам (для CI не годится).
+
+### 16.4 Субагенты как в Cursor — расширение `subagent`
+
+В pi.dev **из коробки субагентов нет** (в slash-командах их нет). Но в установке есть официальный
+пример-расширение `examples/extensions/subagent/` — полноценная замена Cursor-агентов.
+
+- Регистрирует инструмент `subagent`; модель вызывает его сама из обычного промпта:
+  - `Use scout to find all authentication code` — один агент;
+  - `Run 2 scouts in parallel: one for models, one for providers` — параллельно;
+  - `Use a chain: scout finds X, then planner suggests Y` — цепочка; `{previous}` передаёт вывод
+    предыдущего шага.
+- Режимы: single `{agent, task}`, parallel `{tasks: [...]}` (**макс. 8 задач, 4 одновременно**),
+  chain `{chain: [...]}`.
+- Каждый субагент = **отдельный процесс pi с изолированным контекстом**. В выводе — turns/токены/кэш/
+  `$cost`/model по каждому агенту. Ctrl+C убивает дочерние процессы.
+- **Агент = markdown-файл** с YAML-шапкой:
+
+```markdown
+---
+name: reviewer
+description: Code review specialist
+tools: read, grep, find, ls, bash
+model: deepseek/deepseek-v4-pro
+---
+Системный промпт агента...
+```
+
+Поля: `name`, `description`, `tools` (строка или массив), `model` (нет — наследует модель/thinking
+родительской сессии). Формат модели — `provider/id`.
+- **Расположение:** пользовательские `~/.pi/agent/agents/*.md`; проектные `.pi/agents/*.md`
+  (включаются через `agentScope: "project" | "both"`, с подтверждением в нетrusted-проектах).
+  Агенты перечитываются при каждом вызове — правки без рестарта.
+- **Workflow-пресеты** (промпт-шаблоны `~/.pi/agent/prompts/*.md`): `/implement`
+  (scout→planner→worker), `/scout-and-plan`, `/implement-and-review`.
+
+**Установка (сделано 2026-10-11; на Windows копированием, не симлинками):**
+
+```bash
+SRC="$HOME/.pi/agent/install/releases/1.1.0/node_modules/@earendil-works/pi-coding-agent/examples/extensions/subagent"
+mkdir -p ~/.pi/agent/extensions/subagent ~/.pi/agent/agents ~/.pi/agent/prompts
+cp "$SRC/index.ts" "$SRC/agents.ts" ~/.pi/agent/extensions/subagent/
+cp "$SRC/agents/"*.md ~/.pi/agent/agents/
+cp "$SRC/prompts/"*.md ~/.pi/agent/prompts/
+```
+
+**Адаптация под DeepSeek:** шаблонные агенты заточены под Claude (`claude-*`) — менять `model:` в
+`.md`: scout → `deepseek/deepseek-flash` (дёшево), planner/reviewer/worker → `deepseek/deepseek-v4-pro`.
+
+**Проверка установки:** `pi --print "Reply with exactly: OK"` (чистый выход = расширение
+скомпилировалось). Затем в JSONL новой сессии в system-сообщении (`sections.tools`) увидеть
+`"name":"subagent"`. В уже запущенной сессии — `/reload`.
+
+### 16.5 Подводные камни
+
+- **`pi --print` наследует env родителя:** запущенный из сессии pi, он получит `PI_MODEL` /
+  `PI_PROVIDER` / `PI_REASONING_LEVEL` и проигнорирует `defaultModel` из settings.json. Для проверок
+  задавай модель явно: `--model deepseek/deepseek-flash --thinking low`.
+- `--model` принимает `provider/id` и суффикс `:<thinking>`.
+- Не плодить md-файлы, которые не синхронизированы с кодом: код — источник истины, рассинхрон md/код
+  заставляет агента глючить и жечь токены вхолостую (опыт друга с omp-форком: статус-бар со стоимостью,
+  пресеты настроек — там; в pi часть этого есть из коробки: footer + `/session`).
+- Проверять факты по первоисточнику: доки в установке pi и `examples/` (`subagent`, `handoff.ts`,
+  `preset.ts`, `plan-mode`, `permission-gate.ts` и др.).
+
