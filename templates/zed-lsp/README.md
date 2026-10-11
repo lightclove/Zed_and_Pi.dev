@@ -33,9 +33,9 @@ Zed's `languages.<Name>.language_servers` is an array; `"..."` = keep the remain
 | Language (`languages` key) | Default server(s) | Notes |
 |---|---|---|
 | `TypeScript` / `JavaScript` / `TSX` / `JSX` | `vtsls` | alt: `typescript-language-server` (npm) |
-| `Python` | `pyright` | alt: `ruff` |
-| `Rust` | `rust-analyzer` | |
-| `Go` | `gopls` | |
+| `Python` | `basedpyright` (primary since Zed ≥ 0.204) + `ruff` | needs a Python runtime (uv recommended); `ruff` adds lint + formatting |
+| `Rust` | `rust-analyzer` | auto-downloaded; install rustup toolchain for full cargo analysis |
+| `SQL` / PostgreSQL | **none** | grammar only (SQL extension); no SQL LSP exists — semantic SQL via the Postgres MCP server; formatting via `sql-formatter` |
 | `JSON` / `YAML` / `TOML` | built-in | no config needed |
 | `Markdown` | built-in preview | no LSP needed |
 
@@ -57,6 +57,11 @@ Per-server settings go under top-level `lsp`:
 
 ## Notes
 
+- **Playwright tests** are plain `.ts` files — covered by `vtsls`/`typescript`, no dedicated LSP
+  exists (or is needed). The browser automation itself is the Playwright MCP server
+  (`templates/mcp`).
+- **SQL has no language server in Zed** (or serena) — the `SQL` block above only configures
+  `sql-formatter` with the `postgresql` dialect. Schema/query intelligence = Postgres MCP server.
 - **`vtsls` vs `typescript-language-server`:** Zed defaults to `vtsls` (standalone, auto-downloaded,
   no npm needed). Pin `typescript-language-server` only if you need its specific behavior.
 - **Inlay hints** (`type_hints`, `parameter_hints`, `value_hints`) are off by default — the scaffold

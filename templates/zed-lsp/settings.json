@@ -17,8 +17,9 @@
 
   // --- Per-language overrides ---------------------------------------------
   // "..." keeps Zed's remaining default servers; prefix "!" to exclude one.
-  // Add more entries per project's languages (see table in README.md).
+  // Keep the block for your project's language, remove/ignore the rest.
   "languages": {
+    // -- TypeScript / JavaScript (Node) --
     "TypeScript": {
       "language_servers": ["vtsls", "..."],
       "tab_size": 2,
@@ -29,6 +30,48 @@
       "tab_size": 2,
       "format_on_save": "on"
     }
+
+    // -- Python (uncomment for Python projects) --
+    // Requires a Python runtime (uv recommended; uvx is already used by Serena).
+    // basedpyright = Zed's primary Python LS (type checking, navigation);
+    // ruff = lint diagnostics + formatter (reads ruff.toml / pyproject.toml).
+    // "Python": {
+    //   "language_servers": ["basedpyright", "ruff", "..."],
+    //   "formatter": { "language_server": { "name": "ruff" } },
+    //   "code_actions_on_format": { "source.organizeImports.ruff": true },
+    //   "tab_size": 4
+    // },
+
+    // -- Rust (uncomment for Rust projects) --
+    // rust-analyzer is auto-downloaded by Zed; install the toolchain (rustup)
+    // for full cargo/workspace analysis. rustfmt is picked up automatically.
+    // "Rust": {
+    //   "language_servers": ["rust-analyzer", "..."],
+    //   "tab_size": 4
+    // }
+    // Optional rust-analyzer inlay-hint tuning (see Zed docs / RA manual):
+    // "lsp": {
+    //   "rust-analyzer": {
+    //     "initialization_options": {
+    //       "inlayHints": {
+    //         "lifetimeElisionHints": { "enable": "skip_trivial", "useParameterNames": true },
+    //         "closureReturnTypeHints": { "enable": "always" }
+    //       }
+    //     }
+    //   }
+    // }
+
+    // -- SQL / PostgreSQL (uncomment for projects with SQL files) --
+    // Zed has NO SQL language server — the SQL extension provides grammar only.
+    // Semantic SQL (schema, queries) goes through the Postgres MCP server
+    // (templates/mcp). Optional auto-formatting via sql-formatter:
+    //   npm install -g sql-formatter
+    // "SQL": {
+    //   "formatter": {
+    //     "external": { "command": "sql-formatter", "arguments": ["--language", "postgresql"] }
+    //   },
+    //   "tab_size": 2
+    // }
   },
 
   // --- LSP inlay hints (type/parameter/value hints from the language server) ---
