@@ -22,6 +22,7 @@
 14. [Переход с GUI на pi: базовая работа в терминале](#14-переход-с-gui-на-pi-базовая-работа-в-терминале)
 15. [Дорожная карта освоения](#15-дорожная-карта-освоения)
 16. [Практика 2026-10-11: субагенты, стоимость, настройки](#16-практика-2026-10-11-субагенты-стоимость-настройки)
+17. [Перенос опыта в другие проекты (~/Work)](#17-перенос-опыта-в-другие-проекты-work)
 
 ---
 
@@ -1107,4 +1108,103 @@ cp "$SRC/prompts/"*.md ~/.pi/agent/prompts/
   пресеты настроек — там; в pi часть этого есть из коробки: footer + `/session`).
 - Проверять факты по первоисточнику: доки в установке pi и `examples/` (`subagent`, `handoff.ts`,
   `preset.ts`, `plan-mode`, `permission-gate.ts` и др.).
+
+---
+
+## 17. Перенос опыта в другие проекты (~/Work)
+
+Весь опыт этого проекта переносится в новые проекты в `~/Work` — но **не копированием папки
+целиком**: у pi есть глобальный (user) и проектный уровни ресурсов, и оптимальное решение
+раскладывает ресурсы между ними по двум критериям — цена контекста и дрейф копий.
+
+### 17.1 Инвентарь: что куда
+
+| Ресурс | Сейчас | Куда оптимально | Почему |
+|---|---|---|---|
+| Общие правила: token-economy, Гамильтон/Акин, DeepSeek | `AGENTS.md` (проект) | **global**: `~/.pi/agent/AGENTS.md` | всегда в контексте → одна копия вместо N, контекст короче |
+| Специфика репо: структура, команды, пути | `AGENTS.md` (проект) | **проект** (короткий шаблон) | уникально для каждого репозитория |
+| `deepseek-router.ts`, `delegate.ts` | `.pi/extensions/` | **global**: `~/.pi/agent/extensions/` | чистые инструменты, не зависят от проекта |
+| `/plan`, `/review`, `/ship` | `.pi/prompts/` | **global**: `~/.pi/agent/prompts/` | workflow один на все проекты |
+| `code-review`, `engineering-principles` | `.pi/skills/` | **global**: `~/.pi/agent/skills/` | типовая экспертиза; reference-пути относительны skill-директории → копии работают как есть |
+| `defaultTools`, `hideThinkingBlock`, `showCacheMissNotices` | `.pi/settings.json` (проект) | **global**: `~/.pi/agent/settings.json` | тогда новый проект = **ноль конфига** |
+| `tools/pi-cost/` | проект | проект: **junction** на канон | один файл-источник, без копий |
+| `PI_ZED_DEEPSEEK_MASTERY.md` | проект | **остаётся здесь** | знание-база; в новые проекты не копируется |
+
+Почему так: (1) **токены** — AGENTS.md и описания инструментов/скиллов грузятся в каждый сеанс,
+дублировать их по проектам = платить за тот же текст N раз; (2) **дрейф копий** — расходящиеся
+копии это как издания законов Акина (мы сами на этом попались: 29- и 45-законные версии);
+(3) **trust** — проектные ресурсы требуют подтверждения в каждом новом проекте, глобальные
+доверены один раз.
+
+### 17.2 Вариант A — быстрый: копирование в global (один раз)
+
+```bash
+SRC=~/Work/Zed_and_Pi.dev
+mkdir -p ~/.pi/agent/skills
+cp -r $SRC/.pi/skills/code-review $SRC/.pi/skills/engineering-principles ~/.pi/agent/skills/
+cp $SRC/.pi/extensions/deepseek-router.ts $SRC/.pi/extensions/delegate.ts ~/.pi/agent/extensions/
+cp $SRC/.pi/prompts/plan.md $SRC/.pi/prompts/review.md $SRC/.pi/prompts/ship.md ~/.pi/agent/prompts/
+```
+
+- Общие правила из `AGENTS.md` — в `~/.pi/agent/AGENTS.md`; в проектном файле остаётся только
+  специфика репо.
+- В `~/.pi/agent/settings.json` добавить `defaultTools`, `hideThinkingBlock`, `showCacheMissNotices`
+  (если их там ещё нет) — тогда проектный `.pi/settings.json` новому проекту не нужен.
+- Плюс: 5 минут, без инфраструктуры. Минус: обновление = снова копировать (дрейф возможен).
+
+### 17.3 Вариант B — канон без дрейфа: pi-пакет
+
+`pi install` умеет ставить пакет с extensions+skills+prompts одним юнитом (npm/git/local path;
+см. `docs/packages.md`). Структура пакета-канона:
+
+```text
+pi-harness/
+├── package.json      # {"name":"zed-pi-harness","keywords":["pi-package"]}
+├── extensions/       # deepseek-router.ts, delegate.ts
+├── skills/           # code-review/, engineering-principles/
+└── prompts/          # plan.md, review.md, ship.md
+```
+
+```bash
+pi install ./pi-harness        # personal (global, все проекты)
+pi install -l ./pi-harness     # только в текущий проект (.pi/settings.json)
+pi install git:github.com/<you>/zed-pi-harness@v1   # версионированно, обновление: pi update --extensions
+```
+
+- **Local path грузится из пути без копирования** → правишь канон в одном месте, все проекты видят
+  изменения сразу. Ноль дрейфа.
+- Хост-пакеты (`@earendil-works/pi-ai`, `pi-coding-agent`) — в `peerDependencies: {"*"}`, не в
+  `dependencies` (иначе дубликат классов и warning).
+- Проектные пакеты грузятся только после подтверждения trust.
+- Если пойдёшь по B — Zed_and_Pi.dev тоже перевести на пакет (иначе здесь останется старая копия =
+  тот самый дрейф, от которого уходим).
+
+**Рекомендация:** A сейчас, B — когда появится третий проект (A13: не строить пакет раньше, чем
+появились потребители; при этом global-уровень ничего не блокирует).
+
+### 17.4 Чек-лист нового проекта в ~/Work
+
+```bash
+mkdir ~/Work/myproj && cd ~/Work/myproj && git init
+# 1. .gitignore: node_modules/, auth.json, *.log
+# 2. проектный AGENTS.md — только специфика репо (общие правила уже в global)
+# 3. pi-cost — junction на канон вместо копии (Windows, cmd):
+cmd //c "mklink /J C:\Users\admin\Work\myproj\tools\pi-cost C:\Users\admin\Work\Zed_and_Pi.dev\tools\pi-cost"
+#    (предварительно mkdir tools в новом проекте; альтернатива — git subtree)
+# 4. запустить pi в папке → подтвердить trust → /reload
+```
+
+Проверка переноса — числами, не мнениями (Акин 1):
+
+```bash
+pi --print "Reply with exactly: OK"                       # расширения скомпилировались
+pi --print "Is skill engineering-principles in your skills list? yes/no"   # skill виден модели
+node tools/pi-cost/pi-cost.mjs --last 1                   # стоимость первой сессии в новом проекте
+```
+
+### 17.5 Что НЕ переносить
+
+`sessions/`, `auth.json`, `trust.json`, `models-store.json` — машинно-специфичны (токены, доверие,
+история). Никогда не копируй `~/.pi/agent` целиком и не коммить `auth.json` (гигиена, §Hygiene в
+AGENTS.md).
 
