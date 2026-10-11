@@ -22,3 +22,11 @@
   cache stays warm (cache hits are ~30-50x cheaper than misses).
 - Review tool output before trusting destructive commands.
 - Do not commit secrets or `auth.json`.
+
+## Tools
+
+- `tools/pi-cost/pi-cost.mjs` — отчёт по токенам/стоимости сессий:
+  `node tools/pi-cost/pi-cost.mjs [paths...] [flags]` (по умолчанию все сессии `~/.pi/agent/sessions`).
+  - `--today` — только сессии за сегодня; `--last N` — за последние N дней.
+  - `--top N` — топ-N сессий по стоимости; `--json` — машинночитаемый вывод.
+  - Пример: `node tools/pi-cost/pi-cost.mjs --last 7 --top 5`.
