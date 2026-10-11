@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from", "serena-agent",
+        "serena", "start-mcp-server",
+        "--context", "ide",
+        "--project-from-cwd"
+      ],
+      "description": "LSP-based semantic code tools: symbols, references, definitions, and code search (Serena).",
+      "exposure": "deferred",
+      "env": { "PYTHONUTF8": "1" }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y", "@playwright/mcp@latest",
+        "--headless",
+        "--caps", "vision",
+        "--file-paths", "relative",
+        "--output-dir", ".playwright-mcp"
+      ],
+      "description": "Browser automation via Playwright: navigate, click, fill, snapshot, screenshot.",
+      "exposure": "deferred"
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@henkey/postgres-mcp-server@latest"],
+      "env": { "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}" },
+      "description": "PostgreSQL schema exploration, SQL queries, and migrations. Disabled until a database is reachable; set DATABASE_URL, then enable in /mcp.",
+      "exposure": "deferred",
+      "enabled": false
+    }
+  }
+}

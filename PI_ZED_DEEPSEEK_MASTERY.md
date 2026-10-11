@@ -312,6 +312,11 @@ AGENTS.md                         ← конвенции + правила token-
 .pi/prompts/ship.md               ← /ship (+ numbers gate, Акин 1/26)
 .pi/skills/code-review/           ← skill code-review (+ references/checklist.md)
 .pi/skills/engineering-principles/ ← skill: принципы Гамильтон + законы Акина (+ references/)
+.pi/mcp.json                      ← MCP: serena (LSP) + playwright (браузер) + postgres (отключен, ждёт базу)
+.serena/project.yml               ← LSP-бэкенд serena (typescript/markdown/yaml/json)
+.zed/settings.json                ← Zed LSP: vtsls, inlay hints, tab_size 2
+templates/mcp/                    ← шаблон MCP: serena + playwright + postgres (+ serena.project.yml)
+templates/zed-lsp/                ← шаблон Zed LSP: vtsls + готовые блоки python/rust/sql
 ```
 
 При первом запуске `pi` в папке — подтверди trust, затем `/reload`.
@@ -560,8 +565,9 @@ pi mcp list          # проверка
 ### 9.1 Serena — MCP + LSP в одном (сделано в этом проекте)
 
 Serena = MCP-сервер, который даёт **семантические** инструменты кода (символы, ссылки, определения,
-поиск, безопасный rename) через language servers (**LSP**). Готовая заготовка — `templates/mcp-serena/`
-(README с шагами переноса в любой `~/Work`-проект). Живая копия: `.pi/mcp.json` + `.serena/project.yml`.
+поиск, безопасный rename) через language servers (**LSP**). Готовая заготовка — `templates/mcp/`
+(README с шагами переноса в любой `~/Work`-проект; там же — Playwright и PostgreSQL). Живая копия:
+`.pi/mcp.json` + `.serena/project.yml`.
 
 ```jsonc
 // .pi/mcp.json
@@ -582,6 +588,46 @@ Serena = MCP-сервер, который даёт **семантические*
   полный список языков — в docs Serena). `project.local.yml` и `logs/`/`memories/` — в `.gitignore`.
 - **Проверка:** `pi mcp list` (→ `serena: connected, 22 tools`) и
   `uvx --from serena-agent serena project health-check .` (LSP + symbol-инструменты).
+
+### 9.2 Playwright MCP — реальный браузер (сделано в этом проекте)
+
+`@playwright/mcp` даёт агенту настоящий браузер: navigate/click/fill/snapshot/screenshot. Это заменяет
+«представь, что страница выглядит так» на фактические DOM-снапшоты и скриншоты (Акин 16: проверяй, а не верь).
+
+```jsonc
+{ "mcpServers": { "playwright": {
+    "command": "npx",
+    "args": ["-y", "@playwright/mcp@latest", "--headless", "--caps", "vision",
+             "--file-paths", "relative", "--output-dir", ".playwright-mcp"],
+    "exposure": "deferred"
+} } }
+```
+
+- **`--headless` обязателен** — у сервера дефолт headed (окно на каждый запуск). `--caps vision` —
+  модель получает скриншоты. Профиль персистентный (логины переживают сессии); `--isolated` — для одноразовых.
+- **Браузеры:** `npx playwright install chromium` (у нас уже установлен). Скриншоты в `.playwright-mcp/` → gitignore.
+- **LSP не нужен:** тесты — обычный TypeScript, покрывается `vtsls` (Zed) / `typescript` (Serena).
+- Проверка: `pi mcp list` → `playwright: connected` (~30 инструментов).
+
+### 9.3 PostgreSQL MCP — схема и запросы (сделано, ждёт базу)
+
+`@henkey/postgres-mcp-server` (официальный): исследование схемы, параметризованные запросы, миграции.
+Конфиг подключён с `"enabled": false` — локально нет ни psql, ни docker, ни `DATABASE_URL`
+(ломающийся при каждом старте сервер — шум, а не безопасность; Акин 2).
+
+```jsonc
+{ "mcpServers": { "postgres": {
+    "command": "npx",
+    "args": ["-y", "@henkey/postgres-mcp-server@latest"],
+    "env": { "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}" },   // pi раскрывает ${VAR} в env
+    "exposure": "deferred",
+    "enabled": false      // включить: export DATABASE_URL=... → /mcp → Enable
+} } }
+```
+
+- **Секреты не коммитятся:** строка подключения живёт в `DATABASE_URL` (shell profile), в репо — только `${DATABASE_URL}`.
+- **LSP для SQL не существует** (ни в Zed, ни в Serena) — семантическая работа со схемой/запросами и есть
+  роль этого MCP-сервера. Форматирование SQL в Zed — внешний `sql-formatter` (см. §11.5).
 
 ---
 
@@ -737,6 +783,10 @@ Zed сам детектит и скачивает language servers; конфиг
   привычка → global).
 - **LSP-хоткеи** уже есть из `base_keymap: VSCode`: `F12` определение, `Shift+F12` ссылки, `F2` rename,
   `Ctrl+.` code actions — правки в keymap.json не нужны.
+- **Python/Rust/SQL-блоки** — готовые закомментированные секции в `templates/zed-lsp/settings.json`
+  (Python: `basedpyright`+`ruff`, нужен python-рантайм/uv; Rust: `rust-analyzer`, нужен rustup; SQL:
+  только `sql-formatter` — **LSP для SQL в Zed не существует**, семантика — через Postgres MCP, §9.3).
+- **Playwright-тесты** — обычный TS, покрывается `vtsls`; отдельного LSP не нужно (браузер — через MCP, §9.2).
 - **Не всё работает на проектом уровне** (theme/vim_mode/base_keymap — только global).
 
 ---
@@ -1182,7 +1232,7 @@ cp "$SRC/prompts/"*.md ~/.pi/agent/prompts/
 | `code-review`, `engineering-principles` | `.pi/skills/` | **global**: `~/.pi/agent/skills/` | типовая экспертиза; reference-пути относительны skill-директории → копии работают как есть |
 | `defaultTools`, `hideThinkingBlock`, `showCacheMissNotices` | `.pi/settings.json` (проект) | **global**: `~/.pi/agent/settings.json` | тогда новый проект = **ноль конфига** |
 | `tools/pi-cost/` | проект | проект: **junction** на канон | один файл-источник, без копий |
-| MCP+LSP (Serena): `templates/mcp-serena/` | проект (этот) | **шаблон**: копировать `.pi/mcp.json` + `.serena/project.yml` в каждый проект | `language_servers`/`project_name` уникальны для репо; `--project-from-cwd` делает mcp-запись переносимой без правок |
+| MCP+LSP: `templates/mcp/` (serena + playwright + postgres) | проект (этот) | **шаблон**: копировать `mcp.json` (+ `serena.project.yml` для serena) в каждый проект | `language_servers`/`project_name` уникальны для репо; `--project-from-cwd` и `${DATABASE_URL}` делают записи переносимыми без секретов |
 | Zed LSP: `templates/zed-lsp/` | проект (этот) | **шаблон**: копировать `.zed/settings.json` в каждый проект | `languages`/`tab_size` уникальны для репо; keymap.json — только global |
 | `PI_ZED_DEEPSEEK_MASTERY.md` | проект | **остаётся здесь** | знание-база; в новые проекты не копируется |
 
@@ -1247,8 +1297,8 @@ mkdir ~/Work/myproj && cd ~/Work/myproj && git init
 # 3. pi-cost — junction на канон вместо копии (Windows, cmd):
 cmd //c "mklink /J C:\Users\admin\Work\myproj\tools\pi-cost C:\Users\admin\Work\Zed_and_Pi.dev\tools\pi-cost"
 #    (предварительно mkdir tools в новом проекте; альтернатива — git subtree)
-# 4. MCP+LSP (Serena): скопировать templates/mcp-serena/{mcp.serena.json,serena.project.yml}
-#    → .pi/mcp.json и .serena/project.yml; поправить project_name + language_servers
+# 4. MCP+LSP: скопировать templates/mcp/mcp.json → .pi/mcp.json (убрать лишние серверы;
+#    для serena также serena.project.yml → .serena/project.yml; поправить project_name + language_servers)
 # 5. Zed LSP: скопировать templates/zed-lsp/settings.json → .zed/settings.json;
 #    поправить languages + tab_size под репо
 # 6. запустить pi в папке → подтвердить trust → /reload

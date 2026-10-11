@@ -1,0 +1,24 @@
+# Serena project configuration — copy to .serena/project.yml and edit.
+# Docs: https://oraios.github.io/serena/02-usage/050_configuration.html
+# Version this file; put machine-local overrides in .serena/project.local.yml (gitignored).
+
+project_name: "CHANGEME"
+
+# Language servers to start under the LSP backend. First entry is the fallback.
+# Pick the set that matches this project's files (see templates/mcp-serena/README.md).
+language_servers:
+  - typescript   # .ts / .js
+  - markdown     # docs / AGENTS.md
+  - yaml         # config
+  - json         # config
+
+encoding: "utf-8"
+
+# Self-contained default: do not depend on the global serena_config.yml.
+language_backend: LSP
+
+# Follow the project's own .gitignore when deciding what to index.
+ignore_all_files_in_gitignore: true
+
+# Optional: extra paths to ignore (gitignore-style, quote leading-* patterns).
+# ignored_paths: []
