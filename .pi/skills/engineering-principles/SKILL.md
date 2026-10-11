@@ -7,7 +7,7 @@ description: Engineering discipline for design and orchestration decisions — M
 
 Two sources govern every design and orchestration decision in this harness:
 Margaret Hamilton (Apollo flight software) and Akin's Laws of Spacecraft Design.
-Full lists with source quotes: `references/hamilton.md`, `references/akin-laws.md`.
+Canonical lists + mapping to this harness: `references/hamilton.md`, `references/akin-laws.md`.
 
 ## Core rules, applied to this harness
 
@@ -27,7 +27,7 @@ Full lists with source quotes: `references/hamilton.md`, `references/akin-laws.m
 | A13 | **No justification for designing better than the requirements dictate** | YAGNI: build exactly what the task needs |
 | A14 | **"Better" is the enemy of "good"** (Edison) | Stop polishing when checks pass; ship |
 | A15 | **Improvements occur primarily at interfaces — which is also the prime location for screwing up** (Shea) | Treat every tool/sub-agent I/O contract as the highest-risk surface |
-| A16 | **Previous analysis is not divine truth** | Verify sub-agent and model answers before passing them through; never present someone else's analysis as yours |
+| A16 | **Previous analysis is not the wisdom of the ages** | Verify sub-agent and model answers before passing them through; never present someone else's analysis (or an unverified paraphrase) as truth |
 | A19 | **The odds are against you being immensely smarter than everyone** | If a result looks extraordinary (too fast, too cheap, too good), sanity-check it before trusting |
 | A22 | **When in doubt, document** | Record decisions, assumptions, and numbers where they will be needed later |
 | A26 | **Don't do nuthin' dumb** (Montemerlo) | The final gate before ship: one plain-language pass over the change |

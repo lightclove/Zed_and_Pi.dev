@@ -10,7 +10,7 @@
 
 ## Engineering principles (Hamilton + Akin)
 
-Full set + source quotes: skill `engineering-principles` (`.pi/skills/engineering-principles/`).
+Full set + sources: skill `engineering-principles` (`.pi/skills/engineering-principles/`).
 
 - **Detect errors at the earliest possible point** (Hamilton): cheap checks before expensive
   ones; validate inputs at every boundary — never silently default or coerce on invalid input.
