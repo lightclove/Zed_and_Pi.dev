@@ -720,9 +720,11 @@ Zed — его сила в скорости редактирования и ре
 
 ### 11.1 Конфиг
 
-- Каталог: `C:\Users\admin\AppData\Roaming\Zed\` (`settings.json`, `keymap.json`).
+- Каталог: `C:\Users\admin\AppData\Roaming\Zed\` (`settings.json`, `keymap.json`, `tasks.json`).
 - **Проектный уровень:** `.zed/settings.json` в корне репо (перекрывает global для этого проекта; создаётся
   через `zed: open project settings`). LSP-заготовка — `templates/zed-lsp/`.
+- `tasks.json` — глобальные задачи (например, запуск pi в новой вкладке, §11.6); правится через
+  `zed: open tasks`.
 - Открыть: `zed: open settings`, `zed: open keymap` (путь руками искать не надо).
 - `keymap.json` — **массив** объектов `[{ "context": "...", "bindings": {...} }]`.
 
@@ -790,6 +792,37 @@ Zed сам детектит и скачивает language servers; конфиг
   только `sql-formatter` — **LSP для SQL в Zed не существует**, семантика — через Postgres MCP, §9.3).
 - **Playwright-тесты** — обычный TS, покрывается `vtsls`; отдельного LSP не нужно (браузер — через MCP, §9.2).
 - **Не всё работает на проектом уровне** (theme/vim_mode/base_keymap — только global).
+
+### 11.6 Сессии vs вкладки: новый чат и новая вкладка (настроено в этом проекте)
+
+В pi **вкладок нет** — есть **сессии**. Различай два действия:
+
+| Хочу | Как | Где настройка |
+|---|---|---|
+| Новый чат **в текущей** вкладке (новая сессия) | `/new` или **`F2`** | `~/.pi/agent/keybindings.json`: `"app.session.new": ["f2", "alt+n"]` |
+| Новый чат **в новой вкладке** (параллельный) | **`Ctrl+Shift+N`** | Zed: задача `pi` + `task::Spawn` |
+
+Задача Zed (`%APPDATA%\Zed\tasks.json`, глобальная — работает во всех проектах):
+
+```jsonc
+[{ "label": "pi", "command": "pi",
+   "use_new_terminal": true, "allow_concurrent_runs": true, "reveal": "always" }]
+```
+
+Биндинг (`%APPDATA%\Zed\keymap.json`) — перекрывает дефолтный Zed `ctrl-shift-n` (New Window/Open Recent):
+
+```jsonc
+{ "context": "Workspace",
+  "bindings": { "ctrl-shift-n": ["task::Spawn", { "task_name": "pi" }] } }
+```
+
+- `task::Spawn` работает и когда фокус в терминале (Terminal-контекст эту клавишу не занимает); `command`
+  резолвится в `pi.cmd` (проверено `where pi`); `cwd` задачи — корень проекта.
+- **Встроенные вкладки терминала Zed 1.19.2:** `ctrl-n` (в фокусе терминала) или `ctrl-shift-\`` — новый
+  терминал; `ctrl-pageup`/`ctrl-pagedown` — переключение вкладок; `ctrl-shift-w` — закрыть.
+- **Почему `alt+n` не сработал:** в Zed-терминале он не занят, но на Windows его, вероятно, перехватывает
+  меню приложения — поэтому опираемся на `F2` (F-клавиши в Terminal-контексте свободны) и на задачу.
+- Reload: pi — `/reload`; Zed подхватывает `tasks.json`/`keymap.json` сам (`zed: reload keymap` если нет).
 
 ---
 
