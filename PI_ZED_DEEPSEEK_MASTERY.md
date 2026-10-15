@@ -497,7 +497,44 @@ Zed настроен на `deepseek-chat` / `deepseek-reasoner` (классич�
   `node tools/pi-cost/pi-cost.mjs [paths...] [flags]`; `--today`, `--last N`, `--top N`, `--json`.
   Считает все ветки (реальный расход), cache-hit = `cacheRead / (input + cacheRead)`.
 
-### 7.3 Наша реальная статистика (пересчитано 2026-10-15, `pi-cost --last 30`)
+### 7.3 Баланс DeepSeek в футере
+
+Расширение `deepseek-balance` (`.pi/extensions/deepseek-balance.ts`, в этом репо и в global) добавляет
+под встроенный футер строку с живыми деньгами:
+
+```text
+deepseek $46.44 left · this session -$0.149
+```
+
+**Как работает:**
+
+- При старте сессии один раз тянет реальный баланс с `https://api.deepseek.com/user/balance`.
+  Ключ берётся из провайдера pi (`ctx.modelRegistry.getApiKeyForProvider("deepseek")`) — ничего не хардкодится.
+- Между запросами вычитает траты текущей сессии (usage-записи из `ctx.sessionManager.getEntries()`),
+  поэтому цифра обновляется живьём после каждого ответа модели.
+- **`/balance`** — принудительный ресинк с сервером (нужно, если тратил деньги из другого приложения
+  или параллельной сессии).
+- Ошибки показываются честно: `deepseek balance: HTTP 401` / `no DeepSeek API key (auth.json / DEEPSEEK_API_KEY)`.
+- Не путай с встроенной строкой `5.0%/1.0M (auto)` в футере — это рабочая память (заполненность контекста),
+  а не деньги.
+
+**Установка (себе или другу):**
+
+```bash
+mkdir -p ~/.pi/agent/extensions
+cp ~/Work/Zed_and_Pi.dev/.pi/extensions/deepseek-balance.ts ~/.pi/agent/extensions/
+# в pi: /reload — в футере появится «deepseek $… left»
+```
+
+Нет локальной копии репо — файл можно взять с GitHub:
+`https://github.com/lightclove/Zed_and_Pi.dev/raw/main/.pi/extensions/deepseek-balance.ts`
+(в проекте друга — клади в `.pi/extensions/` его репо, а не в свой global).
+
+**Ключевые API кода:** `ctx.ui.setStatus(key, text)` — своя строка статуса в TUI; события
+`session_start` / `message_end` / `session_compact` — точки обновления; `registerCommand("balance")` —
+слаш-команда. Полный код — раздел 15 (инвентарь) и файл `.pi/extensions/deepseek-balance.ts`.
+
+### 7.4 Наша реальная статистика (пересчитано 2026-10-15, `pi-cost --last 30`)
 
 | Модель | Вызовы | Cache-hit | Стоимость |
 |---|---|---|---|
