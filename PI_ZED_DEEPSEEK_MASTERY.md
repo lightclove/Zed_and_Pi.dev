@@ -298,7 +298,8 @@ pi --mode json "..." > events.jsonl  # структурированные соб
 pi --mode rpc                        # управление процессом
 pi --continue / --resume / --session <id> / --fork <id> / --no-session
 pi --model deepseek/deepseek-flash --thinking low   # выбор модели+уровня
-pi --models "deepseek/*" --list-models deepseek
+pi --models "deepseek/*"           # сузить стартовый выбор и цикл моделей
+pi --list-models deepseek           # каталог моделей с фильтром
 pi --tools read,bash,edit,write,codemode  # набор инструментов
 pi -e ./ext.ts --skill ./skill --prompt-template ./p.md
 pi --append-system-prompt ./rules.md --system-prompt ./sys.md
@@ -458,7 +459,7 @@ $0.05. У DeepSeek-моделей в каталоге `promptCache` нет — �
 ### 6.2 Механика кэша — главный экономический рычаг
 
 - DeepSeek кэширует **префикс запроса на своей стороне автоматически** — никаких маркеров не нужно.
-- **Запись в кэш бесплатна** (`cacheWrite = 0`) — в отличие от Anthropic/OpenAI, где запись дороже обычного ввода.
+- **Запись в кэш бесплатна** (`cacheWrite = 0`) — отдельной платы за запись DeepSeek не берёт.
 - Попадание в кэш в **30–50 раз дешевле** промаха. Главное правило экономии: **сохраняй стабильный префикс** (системный
   промпт + AGENTS.md + набор инструментов + история) и не переключай модель/инструменты посреди задачи.
 - Reasoning-токены **остаются в контексте** (`requiresReasoningContentOnAssistantMessages: true`) — они
@@ -472,9 +473,11 @@ $0.05. У DeepSeek-моделей в каталоге `promptCache` нет — �
 
 ### 6.4 Имена моделей: flash/v4-pro vs chat/reasoner
 
-Zed настроен на `deepseek-chat` / `deepseek-reasoner` (классические ID публичного API), а каталог pi
-использует `deepseek-flash` / `deepseek-v4-pro`. Оба набора могут быть валидными алиасами — сверься с
-`api-docs.deepseek.com` и обнови каталог: `pi update --models`. Проверь на своём ключе.
+Каталог pi называет модели `deepseek-flash` (DeepSeek V4.1 Flash) и `deepseek-v4-pro` (DeepSeek V4 Pro) —
+эти ID использует pi. Классические ID публичного API DeepSeek — `deepseek-chat` и `deepseek-reasoner`;
+в Zed на этой машине они перечислены в `available_models`, а `default_model` настроен на `deepseek-flash`.
+Какие ID принимает твой ключ — смотри в `api-docs.deepseek.com`; каталог pi обновляется командой
+`pi update --models`.
 
 ## 7. Экономия токенов
 
@@ -572,7 +575,8 @@ cp ~/Work/Zed_and_Pi.dev/.pi/extensions/deepseek-balance.ts ~/.pi/agent/extensio
 коммит           → git, ревью диффа в Zed
 ```
 
-Шаблоны `/plan`, `/review`, `/ship` — в `~/.pi/agent/prompts/` (установлены в этом проекте, см. Приложение 15).
+Шаблоны `/plan`, `/review`, `/ship` — в `.pi/prompts/` этого репозитория (см. Приложение 15); при переносе
+в другие проекты их стоит положить в `~/.pi/agent/prompts/` (раздел 17).
 Каждый содержит гейты: `/plan` — допущения, дешёвые проверки, альтернативы; `/review` — findings с
 `file:line`, severity и вердиктом ship/fix/block; `/ship` — numbers gate (тесты/типчек/стоимость) и
 финальный sanity-проход.
@@ -687,7 +691,7 @@ Zed сам определяет и скачивает language servers; прое
 - **`vtsls`** — TS/JS-сервер Zed по умолчанию (скачивается сам, без npm); `"..."` оставляет остальные серверы по умолчанию,
   `"!name"` — исключает. Per-server настройки — под top-level `"lsp": { "<server>": {...} }`.
 - **Inlay hints** выключены по умолчанию — включаются здесь или глобально.
-- **Хоткеи LSP** уже есть из `base_keymap: VSCode`: `F12` определение, `Shift+F12` ссылки, `F2` rename,
+- **Хоткеи LSP** уже есть из `base_keymap: VSCode`: `F12` определение, `Shift+Alt+F12` ссылки, `F2` rename,
   `Ctrl+.` code actions.
 - **Python/Rust/SQL** — готовые закомментированные блоки в `templates/zed-lsp/settings.json` (Python:
   `basedpyright`+`ruff`, нужен python-рантайм/uv; Rust: `rust-analyzer`, нужен rustup; SQL: только
@@ -846,7 +850,7 @@ pi — быстрее и дешевле, чем отдельный процес�
 
 ### 12.2 События (выборочно)
 
-`project_trust`, `session_start/_end/_shutdown/_tree`, `session_before_compact/_fork/_switch`,
+`project_trust`, `session_start/_shutdown/_tree`, `session_before_compact/_fork/_switch`,
 `agent_start/_end/_before_settle/_settled`, `turn_start/_end`, `message_start/_update/_end`,
 `tool_call` (можно блокировать/мутировать), `tool_result` (можно редактировать),
 `tool_execution_start/_update/_end`, `context` / `context_with_system` (трансформация контекста),
@@ -1194,8 +1198,8 @@ cp "$SRC/prompts/"*.md ~/.pi/agent/prompts/
 
 - **Адаптация под DeepSeek:** шаблонные агенты настроены под Claude (`claude-*`) — менять `model:` в
   `.md`: scout → `deepseek/deepseek-flash` (дёшево), planner/reviewer/worker → `deepseek/deepseek-v4-pro`.
-- **Проверка:** `pi --print "Reply with exactly: OK"` (чистый выход = расширение скомпилировалось).
-  Затем в JSONL новой сессии в system-сообщении (`sections.tools`) увидеть `"name":"subagent"`.
+- **Проверка:** `pi --print "Reply with exactly: OK"` (чистый вывод = расширение скомпилировалось).
+  Затем в JSONL новой сессии в system-сообщении найти `"name":"subagent"` в списке `toolsAdded`.
   В уже запущенной сессии — `/reload`.
 
 ### 16.3 Типичные ошибки (каждая — из реального опыта)
