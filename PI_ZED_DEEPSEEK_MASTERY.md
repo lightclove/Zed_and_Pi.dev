@@ -910,7 +910,7 @@ return [a, b, c].map(r => r.status === "fulfilled" ? r.value : "ERR");
 ```
 
 `bash` в скриптах возвращает `{ output, truncated, full_output_path?, exit_code, wall_time_seconds }`.
-Лимиты: 256MB памяти, `max_output_tokens` 10000 по умолчанию, нет Node/сети/таймеров.
+Лимиты: 256MB памяти, `max_output_tokens` 10000 по умолчанию, нет Node/файловой системы/сети/таймеров.
 
 ### 12.6 Эталонный код 1: роутер (`.pi/extensions/deepseek-router.ts`)
 
