@@ -26,6 +26,30 @@ Full set + sources: skill `engineering-principles` (`.pi/skills/engineering-prin
   passing them through; previous analysis is not truth (Akin 16).
 - **When in doubt, document** (Akin 22): record decisions, assumptions, and numbers.
 
+## Fact-check gate (every reply, 100%)
+
+Every reply passes this gate before being sent. Classify each factual claim (paths, numbers,
+dates, prices, quotes, "X is present/absent in Y", "I verified/checked") into exactly one of:
+
+- **Proven** — backed by a command/output shown in the reply itself (command + result, or
+  file:line reference).
+- **Unverified** — no direct evidence; must be labeled inline `[не проверено]` / `[assumption]`.
+
+Hard rules:
+
+1. Never present an unverified claim as proven. Run the cheap check (`grep`, `ls`, `read`)
+   before asserting (H1). "I verified it" without showing the check is a violation.
+2. No invented numbers, quotes, prices, paths, or dates. A number without a source is an
+   estimate — say so explicitly.
+3. A check that found nothing is reported literally ("`grep X` → 0 matches"), never
+   paraphrased as "checked, fine".
+4. Extraordinary claims get a sanity check before leaving the reply (A19); previous analysis
+   is not truth — re-verify before passing through (A16).
+5. Verification-heavy turns (cross-file consistency audits, fact-checking) — escalate to
+   `deepseek-v4-pro`; flash is for routine edits.
+6. Every reply ends with a one-line footer: `Fact-check: <n> proven / <m> unverified / <k>
+   checks run this turn`. No footer = gate skipped = failure.
+
 ## Model usage (DeepSeek)
 
 - `deepseek-flash` is the default workhorse: cheapest input/output and automatic context caching.
