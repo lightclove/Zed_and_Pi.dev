@@ -630,6 +630,11 @@ cp ~/Work/Zed_and_Pi.dev/.pi/extensions/deepseek-balance.ts ~/.pi/agent/extensio
 - pro даёт основную стоимость → держать рутину на flash (раздел 7.1);
 - нужен длинный автономный прогон → планировать на off-peak.
 
+**Первоисточники:** [Token & Token Usage](https://api-docs.deepseek.com/quick_start/token_usage),
+[KV Cache](https://api-docs.deepseek.com/guides/kv_cache),
+[Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing),
+[Get User Balance](https://api-docs.deepseek.com/api/get-user-balance).
+
 ---
 
 # Часть III. Ежедневная работа
