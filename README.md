@@ -132,7 +132,8 @@ pi запрашивает при первом запуске в папке.
 запросу через `tool_search`):
 
 - **serena** — семантические инструменты кода через LSP (`uvx --from serena-agent … --context ide
-  --project-from-cwd`, `env.PYTHONUTF8=1` для Windows cp1251);
+  --project-from-cwd`, `env.PYTHONUTF8=1` для Windows cp1251); у неё есть свой веб-дашборд —
+  `http://127.0.0.1:24282/dashboard/` (раздел 13.5 руководства);
 - **playwright** — реальный браузер (`--headless --caps vision`, скриншоты в `.playwright-mcp/`);
 - **postgres** — схема и запросы (`enabled: false`, строка подключения из `${DATABASE_URL}`, в репо
   секретов нет).
