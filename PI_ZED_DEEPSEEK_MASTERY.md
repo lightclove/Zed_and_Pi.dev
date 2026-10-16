@@ -1082,7 +1082,7 @@ export default function (pi: ExtensionAPI) {
 
 Ключевые идеи: `ctx.modelRegistry.find` → модель; `streamSimple` + `await stream.result()` → финальный
 `AssistantMessage`; `usage` пробрасывается в результат, чтобы сессия корректно считала стоимость субагента;
-валидация на границе и явная ошибка при обрыве/аборте вместо тихого «(empty response)».
+валидация на границе и явная ошибка при обрыве/аборте вместо молчаливого «(empty response)».
 
 ## 13. MCP-серверы: внешние инструменты
 
