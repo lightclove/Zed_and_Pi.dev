@@ -710,7 +710,7 @@ Zed сам определяет и скачивает language servers; прое
   `Ctrl+.` code actions.
 - **Python/Rust/SQL** — готовые закомментированные блоки в `templates/zed-lsp/settings.json` (Python:
   `basedpyright`+`ruff`, нужен python-рантайм/uv; Rust: `rust-analyzer`, нужен rustup; SQL: только
-  `sql-formatter` — **LSP для SQL не существует**, семантика — через Postgres MCP, раздел 13.7).
+  `sql-formatter` — **встроенного SQL-сервера нет**; семантика — через Postgres MCP, раздел 13.7).
 - **Не всё работает на проектном уровне** (theme/vim_mode/base_keymap — только global).
 
 ### 10.5 Сессии vs вкладки: новый чат и новая вкладка
@@ -1346,7 +1346,8 @@ pi mcp list          # проверка
 
 ### 13.7 PostgreSQL MCP — схема и запросы
 
-`@henkey/postgres-mcp-server`: исследование схемы, параметризованные запросы, миграции. Подключён с
+`@henkey/postgres-mcp-server`: исследование схемы, SQL-запросы (в том числе с параметрами), экспорт/импорт
+данных. Подключён с
 `"enabled": false` — локально нет ни psql, ни docker, ни `DATABASE_URL` (сервер, падающий при каждом
 старте, — шум, а не безопасность).
 
@@ -1365,8 +1366,8 @@ pi mcp list          # проверка
 ```
 
 - **Секреты не коммитятся:** строка подключения живёт в `DATABASE_URL` (shell profile), в репо — только `${DATABASE_URL}`.
-- **LSP для SQL не существует** (ни в Zed, ни в Serena) — семантика через Postgres MCP, форматирование —
-  внешний `sql-formatter` (dialect `postgresql`) в Zed.
+- **Встроенного SQL-сервера нет** — у Zed только подсветка и форматирование (`sql-formatter`), у Serena
+  SQL нет в списке языков. Семантику даёт Postgres MCP.
 
 ## 14. Дорожная карта освоения
 
@@ -1474,8 +1475,9 @@ health-check` печатал «✅ Health check passed» и падал `UnicodeE
   для MCP-сервера.
 - **Playwright MCP по умолчанию headed** — на каждый запуск открылось бы окно браузера. Нужен явный
   `--headless` (+ `--caps vision`, `--output-dir .playwright-mcp`, `--file-paths relative`).
-- **SQL-LSP не существует** — ни в Zed (только грамматика), ни в Serena (нет SQL backend).
-  «LSP для PostgreSQL» — это в строгом смысле не LSP, а семантический слой Postgres MCP + `sql-formatter`.
+- **Встроенного SQL-сервера нет** — у Zed только подсветка и форматирование, у Serena SQL не в списке
+  языков. «LSP для PostgreSQL» — это в строгом смысле не LSP, а семантический слой Postgres MCP +
+  `sql-formatter`.
 - **Не подключай сервер, который заведомо не подключится.** Без psql/docker/`DATABASE_URL` Postgres MCP
   стоит с `"enabled": false`. Включается одной командой в `/mcp`, когда база появится.
 - **Секреты — только через env.** `${DATABASE_URL}` в `env` раскрывается pi; в репозитории — только имя
