@@ -91,16 +91,16 @@ pi --list-models deepseek
 
 ## 2. Экран, стоп, навигация, сессии
 
-Если ты пришёл из Cursor / Zed / агентных IDE — главное, что нужно перестроить в голове: **здесь нет
+Если ты пришёл из чисто агентных IDE, например Cursor, ZCode — главное, что нужно перестроить в голове: **здесь нет
 кнопок, есть клавиши.** Всё, что в GUI было кнопкой или выпадающим списком, в pi — хоткей или slash-команда.
 
 ### 2.1 Экран: три зоны
 
-| Зона в pi | Что это | Аналог в GUI |
-|---|---|---|
-| Транскрипт (лента сверху) | промпты, ответы, tool calls, вывод | чат-панель |
-| Редактор (строка внизу) | сюда набираешь промпт | поле ввода |
-| Футер (status bar) | папка, сессия, модель, контекст, стоимость | статус-строка |
+| Зона в pi                 | Что это                                    | Аналог в GUI  |
+| ------------------------- | ------------------------------------------ | ------------- |
+| Транскрипт (лента сверху) | промпты, ответы, tool calls, вывод         | чат-панель    |
+| Редактор (строка внизу)   | сюда набираешь промпт                      | поле ввода    |
+| Футер (status bar)        | папка, сессия, модель, контекст, стоимость | статус-строка |
 
 Текст в редакторе **не отправляется**, пока не нажмёшь `Enter`. Пока не нажал — можно менять модель,
 уровень мышления, редактировать текст, прикладывать файлы (`@`).
@@ -115,26 +115,26 @@ pi --list-models deepseek
 
 Пока агент работает, можно не только останавливать, но и управлять:
 
-| Что хочешь | Клавиша (Windows) | Смысл |
-|---|---|---|
-| Подправить задачу во время выполнения | набрал текст → `Enter` | steering: встанет после текущего хода |
-| Добавить работу после текущей задачи | `Ctrl+Q` | follow-up: выполнится, когда текущая закончится |
-| Вернуть отложенные сообщения в редактор | `Alt+Q` | dequeue |
-| Остановить совсем | `Escape` | abort |
+| Что хочешь                              | Клавиша (Windows)      | Смысл                                           |
+| --------------------------------------- | ---------------------- | ----------------------------------------------- |
+| Подправить задачу во время выполнения   | набрал текст → `Enter` | steering: встанет после текущего хода           |
+| Добавить работу после текущей задачи    | `Ctrl+Q`               | follow-up: выполнится, когда текущая закончится |
+| Вернуть отложенные сообщения в редактор | `Alt+Q`                | dequeue                                         |
+| Остановить совсем                       | `Escape`               | abort                                           |
 
 ### 2.3 Навигация по транскрипту
 
 В fullscreen-режиме скроллом владеет pi: листать удобнее клавишами, но колесо мыши тоже работает.
 
-| Действие | Клавиша (Windows) |
-|---|---|
-| Прокрутка на страницу | `PageUp` / `PageDown` |
-| **Вниз + следовать за новым выводом (автоскролл)** | **`Ctrl+End`** |
-| В самое начало | `Ctrl+Home` |
-| К предыдущему/следующему сообщению | `Ctrl+Up` / `Ctrl+Down` |
-| Поиск по транскрипту | `Ctrl+F` (`Enter` — след., `Shift+Enter` — пред., `Esc` — выйти) |
-| Развернуть/свернуть вывод инструмента | `Ctrl+O` |
-| Свернуть/развернуть thinking | `Ctrl+T` |
+| Действие                                           | Клавиша (Windows)                                                |
+| -------------------------------------------------- | ---------------------------------------------------------------- |
+| Прокрутка на страницу                              | `PageUp` / `PageDown`                                            |
+| **Вниз + следовать за новым выводом (автоскролл)** | **`Ctrl+End`**                                                   |
+| В самое начало                                     | `Ctrl+Home`                                                      |
+| К предыдущему/следующему сообщению                 | `Ctrl+Up` / `Ctrl+Down`                                          |
+| Поиск по транскрипту                               | `Ctrl+F` (`Enter` — след., `Shift+Enter` — пред., `Esc` — выйти) |
+| Развернуть/свернуть вывод инструмента              | `Ctrl+O`                                                         |
+| Свернуть/развернуть thinking                       | `Ctrl+T`                                                         |
 
 **`Ctrl+End` — основная клавиша:** после любой прокрутки вверх она возвращает вниз и снова «следит»
 за работой агента. `Ctrl+Up`/`Ctrl+Down` — перемещение между пользовательскими запросами.
@@ -155,19 +155,19 @@ pi --list-models deepseek
 Редактор промпта работает как readline/emacs: навигация и правка — на клавиатуре. Мышь тоже работает —
 колесо прокручивает транскрипт, выделение и копирование поддерживаются. Основное:
 
-| Клавиша | Действие |
-|---|---|
-| `Ctrl+A` / `Ctrl+E` | в начало / в конец строки |
-| `Ctrl+Left` / `Ctrl+Right` (`Alt+B` / `Alt+F`) | по слову влево/вправо |
-| `Ctrl+W` / `Alt+Backspace` | удалить слово назад |
-| `Ctrl+K` / `Ctrl+U` | удалить до конца / до начала строки |
-| `Ctrl+Y` | вставить удалённое (yank) |
-| `Ctrl+Z` | отмена |
-| `Up` / `Down` | история промптов (курсор в начале строки) |
-| `Shift+Enter` / `Ctrl+J` | новая строка без отправки |
-| `Tab` | автодополнение пути |
-| `@` + текст | поиск и прикрепление файла к промпту |
-| `Ctrl+G` | открыть промпт во внешнем редакторе (Zed) для длинного текста |
+| Клавиша                                        | Действие                                                      |
+| ---------------------------------------------- | ------------------------------------------------------------- |
+| `Ctrl+A` / `Ctrl+E`                            | в начало / в конец строки                                     |
+| `Ctrl+Left` / `Ctrl+Right` (`Alt+B` / `Alt+F`) | по слову влево/вправо                                         |
+| `Ctrl+W` / `Alt+Backspace`                     | удалить слово назад                                           |
+| `Ctrl+K` / `Ctrl+U`                            | удалить до конца / до начала строки                           |
+| `Ctrl+Y`                                       | вставить удалённое (yank)                                     |
+| `Ctrl+Z`                                       | отмена                                                        |
+| `Up` / `Down`                                  | история промптов (курсор в начале строки)                     |
+| `Shift+Enter` / `Ctrl+J`                       | новая строка без отправки                                     |
+| `Tab`                                          | автодополнение пути                                           |
+| `@` + текст                                    | поиск и прикрепление файла к промпту                          |
+| `Ctrl+G`                                       | открыть промпт во внешнем редакторе (Zed) для длинного текста |
 
 `Enter` = отправить. Многострочный промпт — `Shift+Enter` (или `Ctrl+G` → Zed).
 
@@ -191,29 +191,29 @@ pi --list-models deepseek
 «Чат» в pi называется **сессией**. Одна сессия = один JSONL-файл в `~/.pi/agent/sessions/`, привязанный
 к рабочей папке. Постоянной боковой панели нет — список **открывается командой** `/resume`.
 
-| Задача (как в GUI) | Команда / клавиша | Пояснение |
-|---|---|---|
-| **Новый чат** | `/new` | новая пустая сессия в той же папке |
-| Продолжить последний чат | `pi --continue` | при запуске из терминала |
-| **Список чатов / история** | `/resume` | интерактивный селектор; печатай — фильтруется |
-| Переключиться на чат | `Enter` в `/resume` | выбрать из списка |
-| Переключиться по id | `pi --session <id>` | id виден в `/session` |
-| Переименовать чат | `/name Мой-чат` | или `Ctrl+R` в `/resume` |
-| Удалить чат | `Ctrl+D` в `/resume` | `Ctrl+Backspace` — без подтверждения, если поиск пуст |
-| Инфо о чате (id, токены, стоимость) | `/session` | смотри после каждой задачи |
-| Сортировка / пути / только именованные | `Ctrl+S` / `Ctrl+P` / `Ctrl+N` | внутри `/resume` |
-| Импортировать сессию | `/import <path>` | перенос чата из другого места |
+| Задача (как в GUI)                     | Команда / клавиша              | Пояснение                                             |
+| -------------------------------------- | ------------------------------ | ----------------------------------------------------- |
+| **Новый чат**                          | `/new`                         | новая пустая сессия в той же папке                    |
+| Продолжить последний чат               | `pi --continue`                | при запуске из терминала                              |
+| **Список чатов / история**             | `/resume`                      | интерактивный селектор; печатай — фильтруется         |
+| Переключиться на чат                   | `Enter` в `/resume`            | выбрать из списка                                     |
+| Переключиться по id                    | `pi --session <id>`            | id виден в `/session`                                 |
+| Переименовать чат                      | `/name Мой-чат`                | или `Ctrl+R` в `/resume`                              |
+| Удалить чат                            | `Ctrl+D` в `/resume`           | `Ctrl+Backspace` — без подтверждения, если поиск пуст |
+| Инфо о чате (id, токены, стоимость)    | `/session`                     | смотри после каждой задачи                            |
+| Сортировка / пути / только именованные | `Ctrl+S` / `Ctrl+P` / `Ctrl+N` | внутри `/resume`                                      |
+| Импортировать сессию                   | `/import <path>`               | перенос чата из другого места                         |
 
 Осторожно: внутри `/resume` клавиши `Ctrl+P` и `Ctrl+D` значат **не то же**, что в редакторе.
 
 **Ветки — то, чего нет в Cursor.** Сессия — это **дерево**, а не линейный чат. Можно вернуться к любой
 реплике и пойти другим путём, не теряя старую ветку:
 
-| Действие | Команда | Когда |
-|---|---|---|
-| Прыгнуть к более ранней реплике в том же файле | `/tree` | альтернативы должны остаться вместе |
-| Сделать из реплики отдельный чат | `/fork` | альтернатива — независимая работа |
-| Скопировать текущую ветку в новый чат | `/clone` | нужна отдельная копия состояния |
+| Действие                                       | Команда  | Когда                               |
+| ---------------------------------------------- | -------- | ----------------------------------- |
+| Прыгнуть к более ранней реплике в том же файле | `/tree`  | альтернативы должны остаться вместе |
+| Сделать из реплики отдельный чат               | `/fork`  | альтернатива — независимая работа   |
+| Скопировать текущую ветку в новый чат          | `/clone` | нужна отдельная копия состояния     |
 
 Сжатие и экспорт: `/compact` — сжать контекст; `/export` / `/share` / `/copy` — сохранить или поделиться
 чатом. Одноразовый чат (не сохраняется): `pi --no-session`.
@@ -228,20 +228,20 @@ pi --list-models deepseek
 
 ### 2.10 Шпаргалка-переводчик Cursor/Zed → pi
 
-| В GUI (Cursor/Zed) | В pi (терминал) |
-|---|---|
-| Кнопка Stop | `Escape` |
-| Выпадающий список моделей | `Ctrl+L` (меню) или `Ctrl+P`/`Alt+P` (цикл) |
-| Переключатель уровня мышления | `Shift+Tab` |
-| Поле ввода чата | редактор внизу, `Enter` = отправить |
-| Многострочный ввод | `Shift+Enter` / `Ctrl+J` / `Ctrl+G` (Zed) |
-| Боковая панель с чатами / историей | `/resume` (список + поиск) |
-| Новый чат | `/new` |
-| Переименовать чат | `/name` (`Ctrl+R` в списке) |
-| Ветки одного чата | `/tree`, `/fork`, `/clone` |
-| Терминальная вкладка | `!команда` / `!!команда` |
-| Accept/Apply изменения | агент правит файлы сам — смотри diff (раздел 9) |
-| Список всех шорткатов | `/hotkeys` |
+| В GUI (Cursor/Zed)                 | В pi (терминал)                                 |
+| ---------------------------------- | ----------------------------------------------- |
+| Кнопка Stop                        | `Escape`                                        |
+| Выпадающий список моделей          | `Ctrl+L` (меню) или `Ctrl+P`/`Alt+P` (цикл)     |
+| Переключатель уровня мышления      | `Shift+Tab`                                     |
+| Поле ввода чата                    | редактор внизу, `Enter` = отправить             |
+| Многострочный ввод                 | `Shift+Enter` / `Ctrl+J` / `Ctrl+G` (Zed)       |
+| Боковая панель с чатами / историей | `/resume` (список + поиск)                      |
+| Новый чат                          | `/new`                                          |
+| Переименовать чат                  | `/name` (`Ctrl+R` в списке)                     |
+| Ветки одного чата                  | `/tree`, `/fork`, `/clone`                      |
+| Терминальная вкладка               | `!команда` / `!!команда`                        |
+| Accept/Apply изменения             | агент правит файлы сам — смотри diff (раздел 9) |
+| Список всех шорткатов              | `/hotkeys`                                      |
 
 **Запомни три вещи:** `Escape` = стоп · `Ctrl+End` = вниз и следить · `Ctrl+L` = сменить модель, не удаляя промпт.
 
@@ -251,41 +251,41 @@ pi --list-models deepseek
 
 ### 3.1 Slash-команды (вводятся в редакторе)
 
-| Команда | Действие |
-|---|---|
-| `/login` / `/logout` | управление доступом к провайдерам |
-| `/model` | выбор модели (`Ctrl+L`) |
-| `/thinking` | уровень мышления (`Shift+Tab`) |
-| `/settings` | частые настройки |
-| `/reload` | перезагрузка конфига/расширений после правок |
-| `/new` / `/resume` / `/name` / `/session` | сессии |
-| `/tree` / `/fork` / `/clone` | дерево / ветвление |
-| `/compact` | сжать историю |
-| `/mcp` | статус MCP |
-| `/skill:name` | принудительно загрузить skill |
-| `/share` / `/export` / `/copy` | поделиться / экспорт / копия |
-| `/debug` / `/hotkeys` | диагностика / активные шорткаты |
-| `/scoped-models` | управление циклом моделей |
+| Команда                                   | Действие                                     |
+| ----------------------------------------- | -------------------------------------------- |
+| `/login` / `/logout`                      | управление доступом к провайдерам            |
+| `/model`                                  | выбор модели (`Ctrl+L`)                      |
+| `/thinking`                               | уровень мышления (`Shift+Tab`)               |
+| `/settings`                               | частые настройки                             |
+| `/reload`                                 | перезагрузка конфига/расширений после правок |
+| `/new` / `/resume` / `/name` / `/session` | сессии                                       |
+| `/tree` / `/fork` / `/clone`              | дерево / ветвление                           |
+| `/compact`                                | сжать историю                                |
+| `/mcp`                                    | статус MCP                                   |
+| `/skill:name`                             | принудительно загрузить skill                |
+| `/share` / `/export` / `/copy`            | поделиться / экспорт / копия                 |
+| `/debug` / `/hotkeys`                     | диагностика / активные шорткаты              |
+| `/scoped-models`                          | управление циклом моделей                    |
 
 ### 3.2 Хоткеи fullscreen (Windows)
 
-| Действие | Клавиша |
-|---|---|
-| Прокрутка транскрипта на страницу | `PageUp` / `PageDown` |
-| **Вниз + следовать за выводом (автоскролл)** | **`Ctrl+End`** |
-| В начало транскрипта | `Ctrl+Home` |
-| След./пред. сообщение | `Ctrl+Down` / `Ctrl+Up` |
-| Поиск по транскрипту | `Ctrl+F` |
-| Развернуть/свернуть вывод инструмента | `Ctrl+O` |
-| Свернуть/развернуть thinking | `Ctrl+T` |
-| Выбор модели | `Ctrl+L` |
-| Цикл моделей | `Ctrl+P` / `Alt+P` (назад) |
-| Открыть во внешнем редакторе | `Ctrl+G` |
-| Копировать последний ответ | `Ctrl+X` |
-| Follow-up / вернуть в редактор | `Ctrl+Q` / `Alt+Q` |
-| Выход (пустой редактор) | `Ctrl+D` |
-| Прервать | `Escape` |
-| Отмена ввода / выход | `Ctrl+C` |
+| Действие                                     | Клавиша                    |
+| -------------------------------------------- | -------------------------- |
+| Прокрутка транскрипта на страницу            | `PageUp` / `PageDown`      |
+| **Вниз + следовать за выводом (автоскролл)** | **`Ctrl+End`**             |
+| В начало транскрипта                         | `Ctrl+Home`                |
+| След./пред. сообщение                        | `Ctrl+Down` / `Ctrl+Up`    |
+| Поиск по транскрипту                         | `Ctrl+F`                   |
+| Развернуть/свернуть вывод инструмента        | `Ctrl+O`                   |
+| Свернуть/развернуть thinking                 | `Ctrl+T`                   |
+| Выбор модели                                 | `Ctrl+L`                   |
+| Цикл моделей                                 | `Ctrl+P` / `Alt+P` (назад) |
+| Открыть во внешнем редакторе                 | `Ctrl+G`                   |
+| Копировать последний ответ                   | `Ctrl+X`                   |
+| Follow-up / вернуть в редактор               | `Ctrl+Q` / `Alt+Q`         |
+| Выход (пустой редактор)                      | `Ctrl+D`                   |
+| Прервать                                     | `Escape`                   |
+| Отмена ввода / выход                         | `Ctrl+C`                   |
 
 `/hotkeys` — актуальный список. Правки — в `~/.pi/agent/keybindings.json` (id действия → клавиша),
 потом `/reload`. Пример: `{"tui.altScreen.lineUp": "alt+up"}`.
@@ -312,16 +312,16 @@ pi mcp add|remove|list|login|logout
 
 ### 3.4 Environment-переменные
 
-| Переменная | Назначение |
-|---|---|
-| `DEEPSEEK_API_KEY` | ключ провайдера |
-| `PI_CODING_AGENT_DIR` | переопределить каталог конфига (default `~/.pi/agent`) |
-| `PI_OFFLINE` | без сети (без обновления каталога) |
-| `PI_CACHE_RETENTION` | `long` — расширенное кэширование провайдера |
-| `PI_HARDWARE_CURSOR` | показать аппаратный курсор (IME в WSL) |
-| `PI_HYPERLINKS` / `PI_IMAGE_PROTOCOL` / `PI_TRUE_COLOR` | переопределить детекцию терминала |
-| `VISUAL` / `EDITOR` | внешний редактор (fallback) |
-| `HTTP_PROXY` / `HTTPS_PROXY` | прокси |
+| Переменная                                              | Назначение                                             |
+| ------------------------------------------------------- | ------------------------------------------------------ |
+| `DEEPSEEK_API_KEY`                                      | ключ провайдера                                        |
+| `PI_CODING_AGENT_DIR`                                   | переопределить каталог конфига (default `~/.pi/agent`) |
+| `PI_OFFLINE`                                            | без сети (без обновления каталога)                     |
+| `PI_CACHE_RETENTION`                                    | `long` — расширенное кэширование провайдера            |
+| `PI_HARDWARE_CURSOR`                                    | показать аппаратный курсор (IME в WSL)                 |
+| `PI_HYPERLINKS` / `PI_IMAGE_PROTOCOL` / `PI_TRUE_COLOR` | переопределить детекцию терминала                      |
+| `VISUAL` / `EDITOR`                                     | внешний редактор (fallback)                            |
+| `HTTP_PROXY` / `HTTPS_PROXY`                            | прокси                                                 |
 
 Маркеры для дочерних процессов: `AI_AGENT=pi`, `PI_CODING_AGENT=true`; shell-инструментам передаются
 `PI_SESSION_ID`, `PI_SESSION_FILE`, `PI_PROVIDER`, `PI_MODEL`, `PI_REASONING_LEVEL`.
@@ -368,25 +368,25 @@ pi mcp add|remove|list|login|logout
 
 ### 4.4 Пять интерфейсов
 
-| Режим | Как | Для чего |
-|---|---|---|
-| Interactive (TUI) | `pi` | ежедневная работа |
-| Print | `pi --print "..."` | одноразовые/скриптовые задачи, пайплайны |
-| JSON event stream | `pi --mode json "..."` | потребление структурированных событий |
-| RPC | `pi --mode rpc` | управление отдельным процессом pi |
-| TypeScript SDK | `@earendil-works/pi-coding-agent` | встраивание агента в приложение |
+| Режим             | Как                               | Для чего                                 |
+| ----------------- | --------------------------------- | ---------------------------------------- |
+| Interactive (TUI) | `pi`                              | ежедневная работа                        |
+| Print             | `pi --print "..."`                | одноразовые/скриптовые задачи, пайплайны |
+| JSON event stream | `pi --mode json "..."`            | потребление структурированных событий    |
+| RPC               | `pi --mode rpc`                   | управление отдельным процессом pi        |
+| TypeScript SDK    | `@earendil-works/pi-coding-agent` | встраивание агента в приложение          |
 
 Все режимы используют один и тот же агент и механизм сессий.
 
 ### 4.5 Расширения и ресурсы
 
-| Ресурс | Что делает |
-|---|---|
-| **Extension** (`.ts`) | исполняемое поведение: инструменты, команды, провайдеры, события, TUI |
-| **Skill** (`SKILL.md`) | инструкции + файлы, грузятся по требованию |
-| **Prompt template** (`.md`) | переиспользуемый текст → `/команда` |
-| **Theme** | цвета терминала |
-| **Pi package** | npm/git-дистрибутив набора ресурсов |
+| Ресурс                      | Что делает                                                            |
+| --------------------------- | --------------------------------------------------------------------- |
+| **Extension** (`.ts`)       | исполняемое поведение: инструменты, команды, провайдеры, события, TUI |
+| **Skill** (`SKILL.md`)      | инструкции + файлы, грузятся по требованию                            |
+| **Prompt template** (`.md`) | переиспользуемый текст → `/команда`                                   |
+| **Theme**                   | цвета терминала                                                       |
+| **Pi package**              | npm/git-дистрибутив набора ресурсов                                   |
 
 ### 4.6 Доверие и права
 
@@ -403,10 +403,17 @@ pi mcp add|remove|list|login|logout
 ```jsonc
 {
   "theme": "dark",
-  "defaultModel": "deepseek-flash",       // основная модель
-  "defaultThinkingLevel": "low",          // reasoning-бюджет по умолчанию
-  "showCacheMissNotices": true,           // видеть промахи кэша
-  "defaultTools": ["+bash", "+grep", "+find", "+ls", "+codemode", "+tool_search"]
+  "defaultModel": "deepseek-flash", // основная модель
+  "defaultThinkingLevel": "low", // reasoning-бюджет по умолчанию
+  "showCacheMissNotices": true, // видеть промахи кэша
+  "defaultTools": [
+    "+bash",
+    "+grep",
+    "+find",
+    "+ls",
+    "+codemode",
+    "+tool_search",
+  ],
 }
 ```
 
@@ -445,15 +452,15 @@ $0.05. У DeepSeek-моделей в каталоге `promptCache` нет — �
 
 ### 6.1 Две модели (цены сверены с каталогом pi, `models-store.json`)
 
-| | `deepseek-flash` (V4.1 Flash) | `deepseek-v4-pro` (V4 Pro) |
-|---|---|---|
-| Input (промах кэша) | **$0.30 / 1M** | $1.32 / 1M |
-| Input (попадание кэша, `cacheRead`) | **$0.006 / 1M** (×50 дешевле) | $0.044 / 1M (×30 дешевле) |
-| Output | **$1.20 / 1M** | $3.96 / 1M |
-| Запись в кэш (`cacheWrite`) | **$0** | $0 |
-| Контекст / max output | 1M / 384k | 1M / 384k |
-| Вход | текст + **изображения** | только текст |
-| Уровни мышления | `low` / `high` / `max` | только `high` / `max` |
+|                                     | `deepseek-flash` (V4.1 Flash) | `deepseek-v4-pro` (V4 Pro) |
+| ----------------------------------- | ----------------------------- | -------------------------- |
+| Input (промах кэша)                 | **$0.30 / 1M**                | $1.32 / 1M                 |
+| Input (попадание кэша, `cacheRead`) | **$0.006 / 1M** (×50 дешевле) | $0.044 / 1M (×30 дешевле)  |
+| Output                              | **$1.20 / 1M**                | $3.96 / 1M                 |
+| Запись в кэш (`cacheWrite`)         | **$0**                        | $0                         |
+| Контекст / max output               | 1M / 384k                     | 1M / 384k                  |
+| Вход                                | текст + **изображения**       | только текст               |
+| Уровни мышления                     | `low` / `high` / `max`        | только `high` / `max`      |
 
 Провайдер `deepseek`, base URL `https://api.deepseek.com`, API `openai-completions`.
 
@@ -545,11 +552,11 @@ cp ~/Work/Zed_and_Pi.dev/.pi/extensions/deepseek-balance.ts ~/.pi/agent/extensio
 
 ### 7.4 Наша реальная статистика (пересчитано 2026-10-15, `pi-cost --last 30`)
 
-| Модель | Вызовы | Cache-hit | Стоимость |
-|---|---|---|---|
-| `deepseek-v4-pro` | 1120 | 97.1% | $12.75 |
-| `deepseek-flash` | 81 | 87.8% | $0.50 |
-| **Итого** | **1201** | **96.3%** | **$13.25** |
+| Модель            | Вызовы   | Cache-hit | Стоимость  |
+| ----------------- | -------- | --------- | ---------- |
+| `deepseek-v4-pro` | 1120     | 97.1%     | $12.75     |
+| `deepseek-flash`  | 81       | 87.8%     | $0.50      |
+| **Итого**         | **1201** | **96.3%** | **$13.25** |
 
 Выводы: префикс-кэш DeepSeek работает (hit ~96%); при этом ~96% денег ушло на v4-pro — то есть выбор
 модели важнее объёма. Рутинные задачи — на flash.
@@ -624,13 +631,13 @@ gutter — цветные метки изменённых строк; `editor: t
 Перед коммитом — `git status`, коммить явными путями (см. раздел 16.3). Для ревью проиндексированных
 (staged) изменений: сначала `git add -p`, потом `/review`.
 
-| Cursor | pi / Zed |
-|---|---|
-| Inline before/after | дифф в транскрипте pi, `Ctrl+O` |
-| Accept / Reject | `git add -p` / `git restore <file>` |
+| Cursor                   | pi / Zed                                      |
+| ------------------------ | --------------------------------------------- |
+| Inline before/after      | дифф в транскрипте pi, `Ctrl+O`               |
+| Accept / Reject          | `git add -p` / `git restore <file>`           |
 | Панель изменённых файлов | git panel Zed (`Ctrl+Shift+G`) / `git status` |
-| «Кто менял строку» | gutter + `editor: toggle git blame` |
-| Стадия + коммит | `git add -p` → `git commit` |
+| «Кто менял строку»       | gutter + `editor: toggle git blame`           |
+| Стадия + коммит          | `git add -p` → `git commit`                   |
 
 ## 10. Zed рядом: редактор и git-клиент
 
@@ -661,12 +668,14 @@ gutter — цветные метки изменённых строк; `editor: t
 
 ```jsonc
 [
-  { "context": "Terminal",
+  {
+    "context": "Terminal",
     "bindings": {
       "shift-enter": ["terminal::SendText", "\u001b[13;2u"],
-      "ctrl--":      ["terminal::SendText", "\u001b[45;5u"],
-      "ctrl-alt-]":  ["terminal::SendText", "\u001b[93;7u"]
-    } }
+      "ctrl--": ["terminal::SendText", "\u001b[45;5u"],
+      "ctrl-alt-]": ["terminal::SendText", "\u001b[93;7u"],
+    },
+  },
 ]
 ```
 
@@ -683,9 +692,9 @@ Zed сам определяет и скачивает language servers; прое
   "format_on_save": "on",
   "languages": {
     "TypeScript": { "language_servers": ["vtsls", "..."], "tab_size": 2 },
-    "JavaScript": { "language_servers": ["vtsls", "..."], "tab_size": 2 }
+    "JavaScript": { "language_servers": ["vtsls", "..."], "tab_size": 2 },
   },
-  "inlay_hints": { "enabled": true, "show_type_hints": true }
+  "inlay_hints": { "enabled": true, "show_type_hints": true },
 }
 ```
 
@@ -703,29 +712,38 @@ Zed сам определяет и скачивает language servers; прое
 
 В pi **вкладок нет** — есть **сессии**. Два действия:
 
-| Хочу | Как | Где настройка |
-|---|---|---|
+| Хочу                                       | Как                 | Где настройка                                                        |
+| ------------------------------------------ | ------------------- | -------------------------------------------------------------------- |
 | Новый чат в текущей вкладке (новая сессия) | `/new` или **`F2`** | `~/.pi/agent/keybindings.json`: `"app.session.new": ["f2", "alt+n"]` |
-| Новый чат в новой вкладке (параллельный) | **`Ctrl+Shift+N`** | Zed: задача `pi` + `task::Spawn` |
+| Новый чат в новой вкладке (параллельный)   | **`Ctrl+Shift+N`**  | Zed: задача `pi` + `task::Spawn`                                     |
 
 Задача Zed (`%APPDATA%\Zed\tasks.json`, глобальная — работает во всех проектах):
 
 ```jsonc
-[{ "label": "pi", "command": "pi",
-   "use_new_terminal": true, "allow_concurrent_runs": true, "reveal": "always" }]
+[
+  {
+    "label": "pi",
+    "command": "pi",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": true,
+    "reveal": "always",
+  },
+]
 ```
 
 Биндинг (`%APPDATA%\Zed\keymap.json`) — перекрывает стандартный `ctrl-shift-n` (New Window/Open Recent):
 
 ```jsonc
-{ "context": "Workspace",
-  "bindings": { "ctrl-shift-n": ["task::Spawn", { "task_name": "pi" }] } }
+{
+  "context": "Workspace",
+  "bindings": { "ctrl-shift-n": ["task::Spawn", { "task_name": "pi" }] },
+}
 ```
 
 - `task::Spawn` работает и когда фокус в терминале; `command` резолвится в `pi.cmd` (проверено `where pi`);
   `cwd` задачи — корень проекта.
 - Встроенные вкладки терминала Zed: `ctrl-n` (в фокусе терминала) или `ctrl-shift-`` — новый терминал;
-  `ctrl-pageup`/`ctrl-pagedown` — переключение; `ctrl-shift-w` — закрыть.
+`ctrl-pageup`/`ctrl-pagedown`— переключение;`ctrl-shift-w` — закрыть.
 - **Почему `alt+n` не сработал:** в Zed-терминале он свободен, но на Windows его, вероятно, перехватывает
   меню приложения — опирайся на `F2` (F-клавиши в Terminal-контексте свободны).
 - Reload: pi — `/reload`; Zed подхватывает `tasks.json`/`keymap.json` сам.
@@ -745,17 +763,17 @@ Zed сам определяет и скачивает language servers; прое
 
 ### 11.1 Что когда использовать
 
-| Нужно | Примитив | Где |
-|---|---|---|
-| Постоянные инструкции для папки | `AGENTS.md` | корень проекта / `~/.pi/agent/` |
-| Переиспользуемый промпт из `/` | Prompt template | `.pi/prompts/*.md` |
-| Инструкции + файлы под тип задачи | Skill | `.pi/skills/*/SKILL.md` |
-| Маршрутизация запросов между моделями | Virtual model | extension `registerVirtualModel` |
-| Исполняемый инструмент/команда/событие | Extension | `.pi/extensions/*.ts` |
-| Изолированные субагенты (как в Cursor) | Extension `subagent` (офиц. пример) | `~/.pi/agent/extensions/subagent/` |
-| Параллельные tool-вызовы + фильтрация вывода | codemode | встроенный (`+codemode`) |
-| Внешние инструменты (GitHub, БД, docs) | MCP server | `mcp.json` |
-| Дистрибутив набора ресурсов | Pi package | `pi install` |
+| Нужно                                        | Примитив                            | Где                                |
+| -------------------------------------------- | ----------------------------------- | ---------------------------------- |
+| Постоянные инструкции для папки              | `AGENTS.md`                         | корень проекта / `~/.pi/agent/`    |
+| Переиспользуемый промпт из `/`               | Prompt template                     | `.pi/prompts/*.md`                 |
+| Инструкции + файлы под тип задачи            | Skill                               | `.pi/skills/*/SKILL.md`            |
+| Маршрутизация запросов между моделями        | Virtual model                       | extension `registerVirtualModel`   |
+| Исполняемый инструмент/команда/событие       | Extension                           | `.pi/extensions/*.ts`              |
+| Изолированные субагенты (как в Cursor)       | Extension `subagent` (офиц. пример) | `~/.pi/agent/extensions/subagent/` |
+| Параллельные tool-вызовы + фильтрация вывода | codemode                            | встроенный (`+codemode`)           |
+| Внешние инструменты (GitHub, БД, docs)       | MCP server                          | `mcp.json`                         |
+| Дистрибутив набора ресурсов                  | Pi package                          | `pi install`                       |
 
 ### 11.2 Пять уровней
 
@@ -808,6 +826,7 @@ description: Code review specialist
 tools: read, grep, find, ls, bash
 model: deepseek/deepseek-v4-pro
 ---
+
 Системный промпт агента...
 ```
 
@@ -834,20 +853,20 @@ pi — быстрее и дешевле, чем отдельный процес�
 
 ### 12.1 ExtensionAPI — главные методы
 
-| Метод | Назначение |
-|---|---|
-| `pi.registerTool(tool)` | LLM-вызываемый инструмент (`defineTool`) |
-| `pi.registerCommand(name, {description, handler})` | `/команда` |
-| `pi.registerShortcut(key, {handler})` / `pi.registerFlag(...)` | шорткаты / CLI-флаги |
-| `pi.registerProvider(...)` / `pi.registerMcpServer(...)` | свой провайдер / MCP-сервер |
-| `pi.registerVirtualModel({...})` | виртуальная модель-роутер |
-| `pi.on(event, handler)` | подписка на события |
-| `pi.sendMessage(...)` / `pi.sendUserMessage(...)` | сообщения агенту из кода |
-| `pi.appendEntry(customType, data)` | долговечное состояние вне контекста |
-| `pi.getActiveTools()` / `pi.setActiveTools([...])` | управление активными инструментами |
-| `pi.getSettings()` / `pi.getCommands()` | настройки / команды |
-| `pi.exec(cmd, args)` | shell из расширения |
-| `pi.setModel(...)` / `pi.setThinkingLevel(...)` | смена модели/мышления |
+| Метод                                                          | Назначение                               |
+| -------------------------------------------------------------- | ---------------------------------------- |
+| `pi.registerTool(tool)`                                        | LLM-вызываемый инструмент (`defineTool`) |
+| `pi.registerCommand(name, {description, handler})`             | `/команда`                               |
+| `pi.registerShortcut(key, {handler})` / `pi.registerFlag(...)` | шорткаты / CLI-флаги                     |
+| `pi.registerProvider(...)` / `pi.registerMcpServer(...)`       | свой провайдер / MCP-сервер              |
+| `pi.registerVirtualModel({...})`                               | виртуальная модель-роутер                |
+| `pi.on(event, handler)`                                        | подписка на события                      |
+| `pi.sendMessage(...)` / `pi.sendUserMessage(...)`              | сообщения агенту из кода                 |
+| `pi.appendEntry(customType, data)`                             | долговечное состояние вне контекста      |
+| `pi.getActiveTools()` / `pi.setActiveTools([...])`             | управление активными инструментами       |
+| `pi.getSettings()` / `pi.getCommands()`                        | настройки / команды                      |
+| `pi.exec(cmd, args)`                                           | shell из расширения                      |
+| `pi.setModel(...)` / `pi.setThinkingLevel(...)`                | смена модели/мышления                    |
 
 ### 12.2 События (выборочно)
 
@@ -885,15 +904,15 @@ ctx.modelRegistry.registerVirtualModel(def)                // регистрац
 
 ### 12.4 Виртуальная модель: поля `route(request, ctx)`
 
-| Поле `request` | Значение |
-|---|---|
-| `model`, `thinkingLevel` | выбранная виртуальная модель и уровень |
-| `reason` | `user` / `continuation` / `retry` / `direct` |
-| `previous` | физическая модель+уровень последнего успешного ответа |
-| `failed` | для `retry`: физическая модель+уровень+message упавшего запроса |
-| `state` | состояние роутера на ветке (JSON, переживает компакцию) |
-| `messages` | конверсация запроса |
-| `signal` | abort-сигнал |
+| Поле `request`           | Значение                                                        |
+| ------------------------ | --------------------------------------------------------------- |
+| `model`, `thinkingLevel` | выбранная виртуальная модель и уровень                          |
+| `reason`                 | `user` / `continuation` / `retry` / `direct`                    |
+| `previous`               | физическая модель+уровень последнего успешного ответа           |
+| `failed`                 | для `retry`: физическая модель+уровень+message упавшего запроса |
+| `state`                  | состояние роутера на ветке (JSON, переживает компакцию)         |
+| `messages`               | конверсация запроса                                             |
+| `signal`                 | abort-сигнал                                                    |
 
 Возврат: `{ model, thinkingLevel, state? }`. Нельзя роутить на другую виртуальную модель.
 
@@ -911,7 +930,7 @@ const [a, b, c] = await Promise.allSettled([
   tools.find({ pattern: "**/*.spec.ts" }),
   tools.read({ path: "src/main.ts", offset: 1, limit: 200 }),
 ]);
-return [a, b, c].map(r => r.status === "fulfilled" ? r.value : "ERR");
+return [a, b, c].map((r) => (r.status === "fulfilled" ? r.value : "ERR"));
 ```
 
 `bash` в скриптах возвращает `{ output, truncated, full_output_path?, exit_code, wall_time_seconds }`.
@@ -920,13 +939,23 @@ return [a, b, c].map(r => r.status === "fulfilled" ? r.value : "ERR");
 ### 12.6 Эталонный код 1: роутер (`.pi/extensions/deepseek-router.ts`)
 
 ```ts
-import type { ExtensionAPI, ExtensionContext, ModelRoute, ModelRouteRequest } from "@earendil-works/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionContext,
+  ModelRoute,
+  ModelRouteRequest,
+} from "@earendil-works/pi-coding-agent";
 
 const PROVIDER = "deepseek";
 const FLASH = "deepseek-flash";
 const PRO = "deepseek-v4-pro";
 
-function routeTo(request: ModelRouteRequest, ctx: ExtensionContext, id: string, level: string): ModelRoute {
+function routeTo(
+  request: ModelRouteRequest,
+  ctx: ExtensionContext,
+  id: string,
+  level: string,
+): ModelRoute {
   const model = ctx.modelRegistry.find(PROVIDER, id);
   if (!model) throw new Error(`Model ${PROVIDER}/${id} is not in the catalog`);
   return { model, thinkingLevel: level };
@@ -944,7 +973,11 @@ export default function (pi: ExtensionAPI) {
       // Продолжения/повторы (retry) остаются на предыдущей модели, чтобы кэш не сбрасывался.
       if (request.reason !== "user") {
         const sticky = request.failed ?? request.previous;
-        if (sticky) return { model: sticky.model, thinkingLevel: sticky.thinkingLevel ?? "low" };
+        if (sticky)
+          return {
+            model: sticky.model,
+            thinkingLevel: sticky.thinkingLevel ?? "low",
+          };
       }
       // Эскалация только по явному high/max.
       if (request.thinkingLevel === "high" || request.thinkingLevel === "max") {
@@ -969,44 +1002,82 @@ const delegateTool = defineTool({
     "Run an isolated DeepSeek sub-agent with its own system prompt and a focused task. " +
     "Use for independent work (planning, reviewing, researching) without polluting the main context.",
   parameters: Type.Object({
-    role: Type.String({ description: "System prompt / persona for the sub-agent." }),
+    role: Type.String({
+      description: "System prompt / persona for the sub-agent.",
+    }),
     task: Type.String({ description: "The focused task or question." }),
-    model: Type.Optional(Type.String({ description: "deepseek-flash (default) or deepseek-v4-pro." })),
+    model: Type.Optional(
+      Type.String({
+        description: "deepseek-flash (default) or deepseek-v4-pro.",
+      }),
+    ),
   }),
 
   async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-    const modelId = params.model === "deepseek-v4-pro" ? "deepseek-v4-pro" : "deepseek-flash";
+    const modelId =
+      params.model === "deepseek-v4-pro" ? "deepseek-v4-pro" : "deepseek-flash";
     const model = ctx.modelRegistry.find("deepseek", modelId);
     if (!model) {
-      return { content: [{ type: "text", text: `delegate: model deepseek/${modelId} is not available` }],
-               details: { error: "model-not-found", modelId }, isError: true };
+      return {
+        content: [
+          {
+            type: "text",
+            text: `delegate: model deepseek/${modelId} is not available`,
+          },
+        ],
+        details: { error: "model-not-found", modelId },
+        isError: true,
+      };
     }
     const reasoning = modelId === "deepseek-v4-pro" ? "high" : "low";
     try {
       const stream = ctx.modelRegistry.streamSimple(
         model,
-        { systemPrompt: params.role,
-          messages: [{ role: "user", content: params.task, timestamp: Date.now() }] },
+        {
+          systemPrompt: params.role,
+          messages: [
+            { role: "user", content: params.task, timestamp: Date.now() },
+          ],
+        },
         { reasoning, maxTokens: 8_000, signal },
       );
       const message = await stream.result();
       const text = message.content
         .filter((block): block is TextContent => block.type === "text")
-        .map((block) => block.text).join("\n").trim();
+        .map((block) => block.text)
+        .join("\n")
+        .trim();
       if (message.stopReason === "error" || message.errorMessage) {
-        return { content: [{ type: "text", text: `delegate error: ${message.errorMessage ?? "unknown"}` }],
-                 details: { error: message.errorMessage, modelId }, isError: true, usage: message.usage };
+        return {
+          content: [
+            {
+              type: "text",
+              text: `delegate error: ${message.errorMessage ?? "unknown"}`,
+            },
+          ],
+          details: { error: message.errorMessage, modelId },
+          isError: true,
+          usage: message.usage,
+        };
       }
-      return { content: [{ type: "text", text: text || "(empty response)" }],
-               details: { modelId, stopReason: message.stopReason }, usage: message.usage };
+      return {
+        content: [{ type: "text", text: text || "(empty response)" }],
+        details: { modelId, stopReason: message.stopReason },
+        usage: message.usage,
+      };
     } catch (error) {
-      return { content: [{ type: "text", text: `delegate failed: ${String(error)}` }],
-               details: { error: String(error), modelId }, isError: true };
+      return {
+        content: [{ type: "text", text: `delegate failed: ${String(error)}` }],
+        details: { error: String(error), modelId },
+        isError: true,
+      };
     }
   },
 });
 
-export default function (pi: ExtensionAPI) { pi.registerTool(delegateTool); }
+export default function (pi: ExtensionAPI) {
+  pi.registerTool(delegateTool);
+}
 ```
 
 Ключевые идеи: `ctx.modelRegistry.find` → модель; `streamSimple` + `await stream.result()` → финальный
@@ -1026,20 +1097,28 @@ pi mcp list          # проверка
 Конфиг: `~/.pi/agent/mcp.json` (глобально) или `.pi/mcp.json` (проект). Формат — стандартный `mcpServers`:
 
 ```jsonc
-{ "mcpServers": {
-    "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "."] },
-    "github":     { "url": "https://api.githubcopilot.com/mcp/", "exposure": "deferred" }
-} }
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+    },
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "exposure": "deferred",
+    },
+  },
+}
 ```
 
 **Exposure** (как модель достигает инструментов сервера):
 
-| Режим | Поведение | Когда |
-|---|---|---|
-| `codemode` (default) | вызывается из codemode-скриптов, модели не декларируется | общие серверы, объединять/фильтровать вызовы |
-| `deferred` | не декларируется, пока `tool_search` не найдёт совпадение | большие серверы |
-| `direct` | декларируется модели как обычный инструмент | маленькие частые наборы |
-| `hidden` | зарегистрирован, но недоступен | выключить/секретные |
+| Режим                | Поведение                                                 | Когда                                        |
+| -------------------- | --------------------------------------------------------- | -------------------------------------------- |
+| `codemode` (default) | вызывается из codemode-скриптов, модели не декларируется  | общие серверы, объединять/фильтровать вызовы |
+| `deferred`           | не декларируется, пока `tool_search` не найдёт совпадение | большие серверы                              |
+| `direct`             | декларируется модели как обычный инструмент               | маленькие частые наборы                      |
+| `hidden`             | зарегистрирован, но недоступен                            | выключить/секретные                          |
 
 `toolExposure` переопределяет exposure для отдельных инструментов (ключи = имена, `*` — wildcard).
 Инструменты именуются `mcp__<server>__<tool>`. Внутри сессии — `/mcp` (статус, sign-in, exposure).
@@ -1052,13 +1131,25 @@ rename) через language servers (LSP). Живая копия — `.pi/mcp.js
 
 ```jsonc
 // .pi/mcp.json
-{ "mcpServers": { "serena": {
-    "command": "uvx",
-    "args": ["--from", "serena-agent", "serena", "start-mcp-server", "--context", "ide", "--project-from-cwd"],
-    "description": "LSP-based semantic code tools: symbols, references, definitions, and code search (Serena).",
-    "exposure": "deferred",
-    "env": { "PYTHONUTF8": "1" }   // cp1251-Windows: форсируем UTF-8 в stdio
-} } }
+{
+  "mcpServers": {
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "serena-agent",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide",
+        "--project-from-cwd",
+      ],
+      "description": "LSP-based semantic code tools: symbols, references, definitions, and code search (Serena).",
+      "exposure": "deferred",
+      "env": { "PYTHONUTF8": "1" }, // cp1251-Windows: форсируем UTF-8 в stdio
+    },
+  },
+}
 ```
 
 - PyPI-пакет `serena-agent`, entrypoint — `serena`; без `--from` uvx не найдёт бинарь.
@@ -1077,12 +1168,25 @@ rename) через language servers (LSP). Живая копия — `.pi/mcp.js
 «представь, что страница выглядит так» — фактические DOM-снапшоты и скриншоты.
 
 ```jsonc
-{ "mcpServers": { "playwright": {
-    "command": "npx",
-    "args": ["-y", "@playwright/mcp@latest", "--headless", "--caps", "vision",
-             "--file-paths", "relative", "--output-dir", ".playwright-mcp"],
-    "exposure": "deferred"
-} } }
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless",
+        "--caps",
+        "vision",
+        "--file-paths",
+        "relative",
+        "--output-dir",
+        ".playwright-mcp",
+      ],
+      "exposure": "deferred",
+    },
+  },
+}
 ```
 
 - **`--headless` обязателен** — у сервера по умолчанию режим headed (окно на каждый запуск). `--caps vision` — модель
@@ -1097,13 +1201,17 @@ rename) через language servers (LSP). Живая копия — `.pi/mcp.js
 старте, — шум, а не безопасность).
 
 ```jsonc
-{ "mcpServers": { "postgres": {
-    "command": "npx",
-    "args": ["-y", "@henkey/postgres-mcp-server@latest"],
-    "env": { "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}" },   // pi раскрывает ${VAR} в env
-    "exposure": "deferred",
-    "enabled": false      // включить: export DATABASE_URL=... → /mcp → Enable
-} } }
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@henkey/postgres-mcp-server@latest"],
+      "env": { "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}" }, // pi раскрывает ${VAR} в env
+      "exposure": "deferred",
+      "enabled": false, // включить: export DATABASE_URL=... → /mcp → Enable
+    },
+  },
+}
 ```
 
 - **Секреты не коммитятся:** строка подключения живёт в `DATABASE_URL` (shell profile), в репо — только `${DATABASE_URL}`.
@@ -1170,13 +1278,13 @@ tools/pi-cost/                    ← pi-cost.mjs: агрегат стоимос
 
 ### 16.1 Числа (пересчитано 2026-10-15, `node tools/pi-cost/pi-cost.mjs --last 30`)
 
-| Проверка | Результат |
-|---|---|
-| Стоимость за 30 дней | 1201 вызовов, **$13.25** (v4-pro $12.75 за 1120 вызовов, flash $0.50 за 81) |
-| Cache-hit | **96.3%** (v4-pro 97.1%, flash 87.8%) — префикс-кэш DeepSeek работает |
-| `pi mcp list` | `serena: connected, 22 tools`, `playwright: connected, 31 tools`, `postgres: disabled`, exit 0 |
-| `serena project health-check .` | LS typescript/markdown/yaml/json стартуют, symbol-инструменты отвечают |
-| JSON/JSONC конфигов | все парсятся |
+| Проверка                        | Результат                                                                                      |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Стоимость за 30 дней            | 1201 вызовов, **$13.25** (v4-pro $12.75 за 1120 вызовов, flash $0.50 за 81)                    |
+| Cache-hit                       | **96.3%** (v4-pro 97.1%, flash 87.8%) — префикс-кэш DeepSeek работает                          |
+| `pi mcp list`                   | `serena: connected, 22 tools`, `playwright: connected, 31 tools`, `postgres: disabled`, exit 0 |
+| `serena project health-check .` | LS typescript/markdown/yaml/json стартуют, symbol-инструменты отвечают                         |
+| JSON/JSONC конфигов             | все парсятся                                                                                   |
 
 - **Токены субагентов добавляются к счёту сессии** — каждый вызов `subagent` = отдельный процесс pi
   со своим usage.
@@ -1210,7 +1318,7 @@ cp "$SRC/prompts/"*.md ~/.pi/agent/prompts/
   явно: `--model deepseek/deepseek-flash --thinking low`. `--model` принимает `provider/id` и суффикс
   `:<thinking>`.
 - **cp1251-Windows и эмодзи.** Python на русской локали пишет в консоль в cp1251; `serena project
-  health-check` печатал «✅ Health check passed» и падал `UnicodeEncodeError` — **exit 1 при реальном
+health-check` печатал «✅ Health check passed» и падал `UnicodeEncodeError` — **exit 1 при реальном
   успехе**. Вывод: не полагаться только на код возврата — читать текст вывода. Лечится `env: { "PYTHONUTF8": "1" }`
   для MCP-сервера.
 - **Playwright MCP по умолчанию headed** — на каждый запуск открылось бы окно браузера. Нужен явный
@@ -1247,18 +1355,18 @@ cp "$SRC/prompts/"*.md ~/.pi/agent/prompts/
 
 ### 17.1 Инвентарь: что куда
 
-| Ресурс | Куда оптимально | Почему |
-|---|---|---|
-| Общие правила: token-economy, Гамильтон/Акин, DeepSeek | **global**: `~/.pi/agent/AGENTS.md` | всегда в контексте → одна копия вместо N, контекст короче |
-| Специфика репо: структура, команды, пути | **проект** (короткий шаблон) | уникально для каждого репозитория |
-| `deepseek-router.ts`, `delegate.ts`, `deepseek-balance.ts` | **global**: `~/.pi/agent/extensions/` | чистые инструменты, не зависят от проекта |
-| `/plan`, `/review`, `/ship` | **global**: `~/.pi/agent/prompts/` | workflow один на все проекты |
-| `code-review`, `engineering-principles` | **global**: `~/.pi/agent/skills/` | типовая экспертиза; reference-пути относительны skill-директории |
-| `defaultTools`, `hideThinkingBlock`, `showCacheMissNotices` | **global**: `~/.pi/agent/settings.json` | тогда новый проект = ноль конфига |
-| `tools/pi-cost/` | проект: **junction** (ссылка каталога) на канон | один файл-источник, без копий |
-| MCP+LSP: `templates/mcp/` | **шаблон**: копировать в каждый проект | `language_servers`/`project_name` уникальны для репо; `--project-from-cwd` и `${DATABASE_URL}` делают записи переносимыми без секретов |
-| Zed LSP: `templates/zed-lsp/` | **шаблон**: копировать `.zed/settings.json` | `languages`/`tab_size` уникальны для репо; keymap.json — только global |
-| `PI_ZED_DEEPSEEK_MASTERY.md` | **остаётся здесь** | знание-база; в новые проекты не копируется |
+| Ресурс                                                      | Куда оптимально                                 | Почему                                                                                                                                 |
+| ----------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Общие правила: token-economy, Гамильтон/Акин, DeepSeek      | **global**: `~/.pi/agent/AGENTS.md`             | всегда в контексте → одна копия вместо N, контекст короче                                                                              |
+| Специфика репо: структура, команды, пути                    | **проект** (короткий шаблон)                    | уникально для каждого репозитория                                                                                                      |
+| `deepseek-router.ts`, `delegate.ts`, `deepseek-balance.ts`  | **global**: `~/.pi/agent/extensions/`           | чистые инструменты, не зависят от проекта                                                                                              |
+| `/plan`, `/review`, `/ship`                                 | **global**: `~/.pi/agent/prompts/`              | workflow один на все проекты                                                                                                           |
+| `code-review`, `engineering-principles`                     | **global**: `~/.pi/agent/skills/`               | типовая экспертиза; reference-пути относительны skill-директории                                                                       |
+| `defaultTools`, `hideThinkingBlock`, `showCacheMissNotices` | **global**: `~/.pi/agent/settings.json`         | тогда новый проект = ноль конфига                                                                                                      |
+| `tools/pi-cost/`                                            | проект: **junction** (ссылка каталога) на канон | один файл-источник, без копий                                                                                                          |
+| MCP+LSP: `templates/mcp/`                                   | **шаблон**: копировать в каждый проект          | `language_servers`/`project_name` уникальны для репо; `--project-from-cwd` и `${DATABASE_URL}` делают записи переносимыми без секретов |
+| Zed LSP: `templates/zed-lsp/`                               | **шаблон**: копировать `.zed/settings.json`     | `languages`/`tab_size` уникальны для репо; keymap.json — только global                                                                 |
+| `PI_ZED_DEEPSEEK_MASTERY.md`                                | **остаётся здесь**                              | знание-база; в новые проекты не копируется                                                                                             |
 
 Почему так: (1) **токены** — AGENTS.md и описания инструментов грузятся в каждый сеанс, дублировать их
 по проектам = платить за тот же текст N раз; (2) **дрейф копий** — расходящиеся копии (мы сами допустили:
