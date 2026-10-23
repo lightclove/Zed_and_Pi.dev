@@ -58,6 +58,23 @@ Hard rules:
 - Keep the thinking level low for routine edits: reasoning tokens are billed as output and stay
   in the conversation context.
 
+## MCP usage (token-efficient)
+
+Full rationale + sources: skill `mcp-usage` (`.pi/skills/mcp-usage/`).
+
+- **New capability → cheapest option first** (A13): skill / CLI script / small tool with README;
+  MCP only for external ecosystems (browser, DB, GitHub/Jira).
+- **Exposure is a cost decision**: default `deferred`; `direct` only for small always-on sets;
+  `codemode` for batchable servers. Never `direct` for a large server — full schemas bloat the
+  system prompt.
+- **Deferred tools are invisible until found**: call `tool_search` before any `mcp__*` tool;
+  never invent tool names.
+- **Bulk = codemode**: N > 1 uniform calls → one script with `Promise.allSettled`, reduced final
+  result (direct text > 20 KB is middle-truncated anyway).
+- **Every MCP call is a delegated call** (A2): check `isError` (resolves inside scripts!), handle
+  timeout/disconnect; a failed call is never success.
+- **Numbers, not opinions** (A1): "MCP is expensive/underused" → measure with `pi-cost` first.
+
 ## Hygiene
 
 - Keep the system prompt and tool set stable during a session so DeepSeek's automatic prefix

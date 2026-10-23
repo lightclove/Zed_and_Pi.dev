@@ -83,6 +83,9 @@ committed config.
 
 ## Exposure
 
+Rules for picking a mode and using MCP without overpaying tokens — skill `mcp-usage`
+(`.pi/skills/mcp-usage/` in this repo; full rationale in its `references/mcp-economics.md`).
+
 | Mode | When to use |
 |---|---|
 | `deferred` (used here) | large servers, tools loaded via `tool_search` on demand |
