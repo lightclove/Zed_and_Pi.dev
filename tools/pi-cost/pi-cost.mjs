@@ -12,6 +12,8 @@
  *   --last N       only sessions from the last N days
  *   --top N        show only the top N sessions by cost
  *   --json         machine-readable output
+ *   --health       token-thrift compliance gate: fails when v4-pro is the
+ *                  workhorse instead of flash, or the cache is cold
  *
  * Semantics: every assistant message = one paid API call. All branches count
  * (that is the actual spend). usage.reasoning is a subset of usage.output.
@@ -48,11 +50,12 @@ const num = (s) => {
   return Number.isInteger(n) && n > 0 ? n : 0;
 };
 function parseArgs(argv) {
-  const opts = { paths: [], json: false, today: false, last: 0, top: 0 };
+  const opts = { paths: [], json: false, today: false, last: 0, top: 0, health: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--json") opts.json = true;
     else if (a === "--today") opts.today = true;
+    else if (a === "--health") opts.health = true;
     else if (a === "--last") opts.last = num(argv[++i]);
     else if (a === "--top") opts.top = num(argv[++i]);
     else if (!a.startsWith("--")) opts.paths.push(a);
@@ -136,6 +139,34 @@ function usageEntry(entry) {
   };
 }
 
+function printHealth(models, total) {
+  console.log("token-thrift health (rule: flash is the default workhorse, cache stays warm)");
+  const rows = Object.entries(models).sort((a, b) => b[1].cost - a[1].cost);
+  const totalCost = total.cost || 0;
+  let v4Share = 0;
+  for (const [name, a] of rows) {
+    const share = totalCost > 0 ? (a.cost / totalCost) * 100 : 0;
+    console.log(`  ${name.padEnd(28)} ${String(a.calls).padStart(6)} calls   $${money(a.cost)}   ${share.toFixed(1)}% of cost`);
+    if (name.includes("v4-pro")) v4Share += share;
+  }
+  console.log(`  cache hit rate: ${hitRate(total)}%`);
+  let verdict = "PASS";
+  const notes = [];
+  if (v4Share > 80) {
+    verdict = "FAIL";
+    notes.push(`v4-pro is ${v4Share.toFixed(1)}% of cost — flash should be the default workhorse (AGENTS.md: 'deepseek-flash is the default')`);
+  } else if (v4Share > 50) {
+    verdict = "WARN";
+    notes.push(`v4-pro is ${v4Share.toFixed(1)}% of cost — confirm escalation was justified (hard reasoning/audits only)`);
+  }
+  if (Number(hitRate(total)) < 90) {
+    if (verdict === "PASS") verdict = "WARN";
+    notes.push(`cache hit rate ${hitRate(total)}% < 90% — keep the system prompt + tool set stable`);
+  }
+  console.log(`verdict: ${verdict}${notes.length ? " — " + notes.join("; ") : ""}`);
+  return verdict === "FAIL" ? 1 : 0;
+}
+
 function printReport(models, perFile, total, top) {
   console.log("model                         calls    input  cacheRead    hit%    output reasoning      tokens        cost");
   const rows = Object.entries(models).sort((a, b) => b[1].cost - a[1].cost);
@@ -205,6 +236,10 @@ async function main() {
   let perFileOut = perFile;
   if (opts.top > 0) {
     perFileOut = Object.fromEntries(Object.entries(perFile).sort((a, b) => b[1].cost - a[1].cost).slice(0, opts.top));
+  }
+  if (opts.health) {
+    process.exitCode = printHealth(models, total);
+    return;
   }
   if (opts.json) {
     console.log(

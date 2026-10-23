@@ -8,6 +8,7 @@
 node tools/pi-cost/pi-cost.mjs                       # все сессии (~/.pi/agent/sessions, рекурсивно)
 node tools/pi-cost/pi-cost.mjs session.jsonl         # один файл
 node tools/pi-cost/pi-cost.mjs dir1 dir2 --json      # папки + машинный вывод (JSON)
+node tools/pi-cost/pi-cost.mjs --health             # gate: v4-pro ≠ workhorse, cache warm
 ```
 
 ## Семантика
@@ -17,6 +18,16 @@ node tools/pi-cost/pi-cost.mjs dir1 dir2 --json      # папки + машинн
 - `hit%` = `cacheRead / (input + cacheRead)` — доля входных токенов, взятых из кэша провайдера.
 - `reasoning` — подмножество `output` (мыслительные токены, тоже тарифицируются как output).
 - `cost` — сумма `usage.cost.total` (считается pi по ценам каталога). Вызовы без `usage` пропускаются.
+
+## Health-gate
+
+`--health` проверяет соблюдение правил экономии токенов и возвращает код выхода:
+
+- **FAIL (1)** — v4-pro > 80% стоимости: рабочий по умолчанию должен быть flash
+  (правило AGENTS.md «deepseek-flash is the default workhorse»).
+- **WARN (0)** — v4-pro > 50% стоимости (эскалация должна быть оправдана) или
+  cache hit < 90% (держать system prompt и набор инструментов стабильным).
+- **PASS (0)** — правила соблюдены.
 
 ## Ограничения
 
