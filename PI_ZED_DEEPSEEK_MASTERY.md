@@ -1564,6 +1564,63 @@ health-check` печатал «✅ Health check passed» и падал `UnicodeE
 
 Правило: «ключ, которого я не видел в схеме/help — не пишу». Это дешевле, чем отладка сломанной конфигурации.
 
+### 16.5 Конфликт расширений: глобальная и проектная копии (fix 2026-10-23)
+
+**Симптом.** `pi` в проекте не стартует:
+
+```
+Error: Failed to load extension "C:\Users\admin\.pi\agent\extensions\delegate.ts": Tool "delegate" conflicts with C:\Users\admin\Work\Zed_and_Pi.dev\.pi\extensions\delegate.ts
+Hint: Start without extensions using "pi -ne".
+```
+
+**Причина.** Один и тот же инструмент `delegate` зарегистрирован из двух файлов сразу: проектного
+`.pi/extensions/delegate.ts` и глобального `~/.pi/agent/extensions/delegate.ts`. Одно имя tool из двух
+разных файлов pi считает фатальным конфликтом (проверка `detectExtensionConflicts` в бандле pi 1.3.0).
+Конфликтуют только **tools и флаги** — команды и виртуальные модели перерегистрируются без ошибки,
+поэтому `deepseek-balance.ts` (команда `balance`) и `deepseek-router.ts` (виртуальная модель `auto`)
+конфликта не дали. Копии были идентичны по содержимому: `diff --strip-trailing-cr` → exit 0
+(различались только CRLF/LF).
+
+**Как получилось.** В проекте живут два контура — встроенный агент Zed (читает AGENTS.md и проектные
+файлы) и харнесс pi.dev (`~/.pi/agent/`). При переносе расширений в global по «Варианту A» (§ 17.2)
+проектные копии не удалили — переключение между контурами это не чинит: при каждом старте `pi`
+загружает оба скоупа и падает на дубле.
+
+**Фикс.** Удалять копии не обязательно. Проектные расширения грузятся первыми, поэтому глобальной
+копии `delegate.ts` добавлен guard: если в проекте есть своя копия — глобальная уступает:
+
+```ts
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { CONFIG_DIR_NAME, defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+
+export default function (pi: ExtensionAPI) {
+  // Project-local extensions load first; if this project ships its own copy,
+  // registering the same tool again would be a hard load conflict.
+  if (existsSync(join(process.cwd(), CONFIG_DIR_NAME, "extensions", "delegate.ts"))) return;
+  pi.registerTool(delegateTool);
+}
+```
+
+⚠️ Проверить «уже зарегистрирован ли tool» через `pi.getAllTools()` в фабрике расширения нельзя:
+на фазе загрузки action-методы заблокированы и бросают «Extension runtime not initialized». Поэтому
+детект — файловой системой, а не через API.
+
+**Проверка (без расхода токенов).**
+
+```bash
+pi -p "say ok" --model deepseek/flash --api-key invalid-key-for-test
+# ожидаемо: только 401 от DeepSeek (ключ намеренно невалидный), «Failed to load extension» — нет
+```
+
+Глубже — временная диагностическая расшира, печатающая `pi.getAllTools()` в `session_start`:
+`delegate` в списке ровно один раз, ошибок загрузки нет. (`--tools delegate` для проверки НЕ годится:
+неизвестные имена в allowlist молча игнорируются — проверено на `no_such_tool_xyz`.)
+
+**Профилактика.** Держи каждое расширение в одном скоупе: либо только проект (`.pi/extensions/`),
+либо только global (`~/.pi/agent/extensions/`), как в таблице § 17.1. Если копии в обоих — обязателен
+такой guard, иначе конфликт вернётся при следующем `cp` без удаления исходников.
+
 ## 17. Перенос опыта в другие проекты
 
 Опыт переносится в новые проекты `~/Work` — но **не копированием папки целиком**: у pi есть глобальный
@@ -1598,6 +1655,11 @@ cp -r $SRC/.pi/skills/code-review $SRC/.pi/skills/engineering-principles ~/.pi/a
 cp $SRC/.pi/extensions/deepseek-router.ts $SRC/.pi/extensions/delegate.ts ~/.pi/agent/extensions/
 cp $SRC/.pi/prompts/plan.md $SRC/.pi/prompts/review.md $SRC/.pi/prompts/ship.md ~/.pi/agent/prompts/
 ```
+
+⚠️ Если проектные копии расширений остаются на месте — в глобальном `delegate.ts` должен стоять
+guard (см. § 16.5), иначе `pi` в этом проекте не стартует: `Tool "delegate" conflicts with ...`.
+Либо удали проектные копии после `cp` — тогда guard не нужен, но репозиторий теряет самодостаточность
+(свежий клон без global-настройки не получит `delegate`).
 
 - Общие правила из `AGENTS.md` — в `~/.pi/agent/AGENTS.md`; в проектном файле остаётся только специфика репо.
 - В `~/.pi/agent/settings.json` добавить `defaultTools`, `hideThinkingBlock`, `showCacheMissNotices`.
