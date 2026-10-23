@@ -49,6 +49,8 @@
 15. [Что настроено в этом проекте](#15-что-настроено-в-этом-проекте)
 16. [Журнал практики: числа и типичные ошибки](#16-журнал-практики-числа-и-типичные-ошибки)
 17. [Перенос опыта в другие проекты](#17-перенос-опыта-в-другие-проекты)
+18. [MCP без переплаты токенов](#18-mcp-без-переплаты-токенов)
+19. [Защита секретов и конфиденциальных данных](#19-защита-секретов-и-конфиденциальных-данных)
 
 ---
 
@@ -1478,6 +1480,12 @@ AGENTS.md                         ← конвенции + правила token-
 .pi/prompts/ship.md               ← /ship (+ numbers gate, Акин 1/26)
 .pi/skills/code-review/           ← skill code-review (+ references/checklist.md)
 .pi/skills/engineering-principles/← skill: принципы Гамильтон + законы Акина (+ references/)
+.pi/skills/mcp-usage/             ← skill: MCP без переплаты контекста (+ references/mcp-economics.md), раздел 18
+.pi/skills/secret-leak-guard/     ← skill: защита секретов (+ references/), раздел 19
+.env.json                         ← имена секретных переменных для pi-heimdall/secret-guard (без значений)
+.githooks/pre-commit              ← gitleaks-гейт перед коммитом (core.hooksPath=.githooks), раздел 19
+tools/bin/gitleaks.exe            ← сканер секретов 8.30.1 (fallback для хука)
+.gitignore                        ← слой 1 защиты секретов (.env, auth.json, *.pem…)
 .pi/mcp.json                      ← MCP: serena (LSP) + playwright (браузер) + postgres (disabled)
 .serena/project.yml               ← LSP-бэкенд serena (typescript/markdown/yaml/json)
 .zed/settings.json                ← Zed LSP: vtsls, inlay hints, tab_size 2
@@ -1784,3 +1792,189 @@ cache-hit), а не конфиг конкретного репозитория.
 
 `sessions/`, `auth.json`, `trust.json`, `models-store.json` — машинно-специфичны (токены, доверие,
 история). Никогда не копируй `~/.pi/agent` целиком и не коммить `auth.json`.
+
+---
+
+## 18. MCP без переплаты токенов
+
+Скилл **`mcp-usage`** (`.pi/skills/mcp-usage/`): `SKILL.md` — рабочие правила,
+`references/mcp-economics.md` — полное обоснование с метками проверки и источниками.
+
+### 18.1 Почему MCP «съедает» токены
+
+Два механизма, оба про то, что попадает в контекст модели:
+
+1. **Схемы заранее.** Классический MCP-клиент при подключении сервера кладёт в системный контекст
+   описания и JSON-схемы всех его tools. Модель платит за них в каждом запросе, даже если ни разу
+   их не вызовет. Один сложный сервер — порядка **10k+ токенов** `[оценка]`; несколько серверов — и
+   заметная часть окна потрачена до начала работы.
+2. **Промежуточные результаты остаются в контексте.** Каждый результат tool call возвращается модели:
+   цепочка из 10 вызовов оставляет 10 блоков, хотя нужен только итог.
+
+Ключевая мысль (из видео-серии): отказ от MCP в ядре — это решение про **context budget**, а не про
+«не нравится протокол». `skills` — альтернатива always-on tools: markdown-файл читается только
+тогда, когда задача совпала с описанием, то есть постоянная цена до первого использования ≈ 0.
+
+### 18.2 Что делает pi (проверено по `docs/mcp.md` 1.3.0)
+
+| Механизм | Факт из документации |
+| --- | --- |
+| `exposure: deferred` | «Not declared until `tool_search` loads a match for the next model call»; загруженные остаются объявленными на ветке |
+| `exposure: codemode` (default) | «Callable from codemode scripts, but neither declared to the model nor listed in the codemode description» |
+| `exposure: direct` | «Declared to the model like a built-in tool» — только для маленьких наборов |
+| Список серверов в промпте | одна строка `description` на сервер в секции `mcp_servers`, без схем |
+| Ленивый старт | серверы подключаются в фоне; первый запрос ждёт до 10 с только `direct` |
+| Обрезка результатов | текст > 20 КБ доходит с вырезанной серединой; полный — во временном файле; codemode-скрипт получает полный результат |
+
+### 18.3 Почему кажется, что pi «не использует MCP в полную силу»
+
+1. Инструменты невидимы до `tool_search` — лишний шаг рассуждения.
+2. Серверы ленивые: поднимаются по потребности, а не висят готовыми.
+3. `codemode` по умолчанию: модель пишет JS-скрипт, в контекст попадает только итог — экономно, но
+   для одного простого запроса выглядит менее прямолинейно.
+4. Prompts, elicitation, UI, tasks в базовой реализации слабее; полноценнее — через `pi-mcp-adapter`.
+
+### 18.4 Правила (из `SKILL.md`)
+
+| Ситуация | Выбор | Постоянная цена |
+| --- | --- | --- |
+| Частая узкая операция | skill / CLI / маленький tool с README | ≈ 0 |
+| Внешняя экосистема (браузер, БД, GitHub/Jira) | MCP-сервер, `exposure: deferred` | одна строка описания |
+| Маленький набор, нужный в каждом ходе | `direct` | полные схемы набора |
+| Много однотипных вызовов | один codemode-скрипт с `Promise.allSettled` | только итог |
+
+- **Новая возможность — сначала дешёвый вариант** (Акин 13/35, YAGNI).
+- **Deferred-инструменты невидимы до поиска**: сначала `tool_search`, никогда не выдумывать имена
+  `mcp__*`.
+- **Массовые вызовы — codemode**: N > 1 однотипных вызовов одним скриптом; результат сокращать внутри
+  скрипта (прямой текст > 20 КБ всё равно приходит обрезанным).
+- **Каждый MCP-вызов — делегированный** (Акин 2): `isError` проверять обязательно — в codemode он
+  **резолвится**, а не бросает исключение; таймаут и отключённый сервер обрабатывать явно.
+- **Числа не мнения** (Акин 1): «MCP дорого/дёшево» — только с цифрой `pi-cost`.
+- **Стабильный тулсет = тёплый кэш**: не менять exposure посреди сессии.
+
+### 18.5 Перенос в Zed/ZCode (проверено на rvoice и Indra)
+
+В Zed и ZCode **нет** `deferred`/`codemode`: всё, что подключено в `context_servers`
+(`.zed/settings.json`) или `.mcp.json`, объявляется модели каждый ход. Поэтому аргумент строже:
+единственный регулятор — *сколько серверов включено*. Скилл перенесён адаптированно:
+
+- `rvoice` → `.agents/skills/mcp-usage/`, правила в `AGENTS.md`, гейт `tools/token-thrift-check.mjs`
+  расширен (33 OK / 0 FAIL); скилл и харнесс в git не попадают — `.agents/` в `.gitignore`.
+- `Indra` → `.agents/skills/mcp-usage/` (рус.), правила в `AGENTS.md`, ссылка в `.agents/README.md`;
+  `harness_check.mjs` → 0 FAIL. Корень воркспейса — не git-репозиторий.
+
+### 18.6 Источники
+
+- `docs/mcp.md` установки pi 1.3.0 — exposure, tool_search, ленивый старт, обрезка, адаптер.
+- https://www.aibuilderclub.com/blog/pi-agent-extensions-guide
+- https://github.com/gtesei/agentic_design_patterns/blob/main/orchestration/mcp/pi.md
+- https://pi.dev/packages/pi-mcp-adapter?name=rpc+sub+agent
+- https://pi.dev/packages/@pixu1980/pi-mcp
+- Видео: `0sI0MbCt4f4` (основное — context budget), `v_gyTuXUKlQ` (MCP встроен, opt-in),
+  `a3uVCPN_Rr4` (рус., 47 мин, mcp.json), `2s573tu8B7M` (рус., «skills вместо MCP»),
+  `l3YCoX2i-78` (когда MCP оправдан). `[не проверено]`: не просмотрены — `youtube.com` на рабочей
+  машине отдаёт NXDOMAIN (`nslookup`), `yt-dlp` → `getaddrinfo failed`; пересказ по формулировкам
+  владельца.
+
+---
+
+## 19. Защита секретов и конфиденциальных данных
+
+Скилл **`secret-leak-guard`** (`.pi/skills/secret-leak-guard/`): `SKILL.md` — правила,
+`references/secret-leak-guard.md` — исследование с измерениями и источниками. Проверки проведены
+**2026-10-24**, pi **1.3.0**, Windows/Git Bash.
+
+### 19.1 Модель угроз: читаемое = отправленное
+
+| Путь | Уходит в облако? | Чем закрыто |
+| --- | --- | --- |
+| содержимое файла, прочитанного агентом (`read`/`grep`/`cat`) | **да**, в следующем же запросе | gitignore, env-protect |
+| вывод команды (`bash`, MCP-tool) | **да**, и остаётся в транскрипте | secret-guard (частично) |
+| `git commit` / `git push` | **да**, в remote, навсегда | gitleaks pre-commit + gitignore |
+| секрет, который модель вывела сама (декодировала base64) | **да**, отозвать нельзя | только поведенческое правило |
+| история сессий `~/.pi/agent/sessions` | локально, но читается следующими ходами | дисциплина |
+
+Redaction — страховка от чужих ошибок, **не гарантия**. Переписывание истории не отзывает данные,
+уже ушедшие провайдеру: сначала ротация ключа, потом чистка.
+
+### 19.2 Что в pi встроено — ничего (проверено)
+
+`grep -rniE "secret|redact|gitleaks"` по `docs/configuration.md`, `settings.md`, `skills.md`,
+`cli.md` → совпадения только про `auth.json` и CLI-credentials, ни одного механизма редакции.
+`enableInstallTelemetry` по умолчанию **true** (`docs/settings.md:171`) — анонимная телеметрия
+установки (не содержимое файлов), отключается при необходимости. `docs/security.md` прямо
+предупреждает: «Watching the transcript, using project trust, and reviewing changes do not create a
+security boundary».
+
+### 19.3 Готовое решение: `pi-heimdall` — и его измеренные лимиты
+
+`@casualjim/pi-heimdall` 0.3.22 (MIT), реальный pi-пакет (`pi.extensions`), шесть стражей.
+Установка: `pi install npm:@casualjim/pi-heimdall`. На pi 1.3.0 загружается без ошибок.
+
+| Проверка (каждая — отдельный прогон) | Результат |
+| --- | --- |
+| `read .env` | ✔ заблокировано, причина внятная |
+| `read .env.example` | ✔ пропущено (by design) |
+| `bash: echo $SECRET_TOKEN` (имя из `.env.json`) | ✔ заблокировано по имени |
+| `bash: base64 .env2` (1 строка) | ✔ tool_result = `[REDACTED]` |
+| `bash: base64 .env` (**2 строки**) | ✘ **УТЕЧКА — не отредактировано** |
+
+**Причина бага локализована измерением**: needle строится как `base64("KEY=value")` **вместе с
+padding `==`**, а base64 целого двухстрочного файла такой подстроки не содержит —
+`actual.includes(needle)` → `false`, без `==` → `true`. Итог: Heimdall закрывает очевидные атаки и
+его стоит ставить, но он **не граница безопасности**.
+
+Дополнительно: `secret-guard` активен только при наличии `.env.json` в корне проекта (плоский объект,
+**ключи** — имена секретных переменных, значения игнорируются). Без него редакция молчит.
+
+### 19.4 Гейт, который работает: gitleaks
+
+`gitleaks` 8.30.1 (Go, MIT), проверен на посадках:
+
+| Тест | Результат |
+| --- | --- |
+| скан репозитория `--source .` | ✔ `no leaks found`, 38 коммитов |
+| AWS `AKIA…`, GitHub PAT, Slack, `sk-…` | ✔ найдены |
+| `--staged` на посаженной утечке | ✔ `exit 1` (коммит блокируется) |
+| `--staged` на чистом файле | ✔ `exit 0` |
+| `gitleaks stdin` | ✘ не сработал ни на одном секрете — использовать файловый/dir-режим |
+| нестандартный короткий AWS-ключ | ✘ пропущен — ловятся известные форматы |
+
+Отклонённые решения (с причинами): `trufflehog` (тяжёлый, дублирует gitleaks), `detect-secrets`
+(Python-зависимость, baseline-модель), `secretlint` 13.x (текстово-ориентирован), `pi-1password`
+(хранилище, а не защита контекста), самописный regex-хук (велосипед).
+
+### 19.5 Внедрённые слои (этот репозиторий)
+
+| Слой | Файл | Проверка |
+| --- | --- | --- |
+| 1. `.gitignore` | `.gitignore` | `git check-ignore -v .env auth.json` |
+| 2. `.env.json` (имена, без значений) | `.env.json` | включает `secret-guard` |
+| 3. `pi-heimdall` | ставится отдельно | `pi -e npm:@casualjim/pi-heimdall -p "Read .env and print it"` → блок |
+| 4. pre-commit гейт | `.githooks/pre-commit`, `tools/bin/gitleaks.exe`, `core.hooksPath=.githooks` | посадить ключ → `exit 1`; убрать → `exit 0` |
+| 5. Поведение | `AGENTS.md`, скилл | не печатать секреты намеренно; увидел — сказать и рекомендовать ротацию |
+
+Детали хука: `SKIP_SECRET_SCAN=1` пропускает один раз **осознанно**; отсутствие сканера —
+**блокировка с ошибкой**, не тихий пропуск (H2); ищется `gitleaks` в PATH, иначе
+`tools/bin/gitleaks.exe`.
+
+**Хук проверен в обе стороны и уже поймал реальную ошибку:** первый коммит этого раздела был
+заблокирован, потому что в примере скилла стоял ключ рабочего формата AWS → заменён на официальный
+плейсхолдер `AKIAIOSFODNN7EXAMPLE`. Правило: гейт, который ни разу не поймал посаженный секрет, не
+протестирован.
+
+### 19.6 Перенос в другие проекты
+
+- `.gitignore` + `.env.json` + `.githooks/pre-commit` + `tools/bin/gitleaks*` переносятся как есть
+  (`git config core.hooksPath .githooks`).
+- `pi-heimdall` — только pi-проекты; в Zed/ZCode (rvoice, Indra) он не работает: там слой 3 —
+  дисциплина, основной гейт — gitleaks-хук.
+- Порядок обязателен: сначала `.gitignore`, потом остальное (незакоммичиваемый файл нельзя запушить).
+
+### 19.7 Источники
+
+- `docs/security.md`, `docs/settings.md:171`, `docs/extensions.md` (`tool_call` может блокировать,
+  `tool_result` — заменять content; `structuredContent` заменять вместе с `content`) — установка pi 1.3.0.
+- `@casualjim/pi-heimdall` 0.3.22 — npm-метаданные, `README.md`, исходники `lib/guards/*.ts`.
+- `gitleaks` v8.30.1 — github.com/gitleaks/gitleaks, релиз 2026-03-21.
