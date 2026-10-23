@@ -1,0 +1,39 @@
+#!/bin/sh
+# Pre-commit secret gate (skill: secret-leak-guard).
+# Blocks the commit when gitleaks finds a secret in the staged diff.
+# Skip once, deliberately: SKIP_SECRET_SCAN=1 git commit ...
+set -u
+
+if [ "${SKIP_SECRET_SCAN:-0}" = "1" ]; then
+  echo "secret-scan: SKIPPED (SKIP_SECRET_SCAN=1) — you are responsible for this."
+  exit 0
+fi
+
+GITLEAKS="${GITLEAKS_BIN:-}"
+if [ -z "$GITLEAKS" ]; then
+  if command -v gitleaks >/dev/null 2>&1; then
+    GITLEAKS="$(command -v gitleaks)"
+  elif [ -x "$(git rev-parse --show-toplevel)/tools/bin/gitleaks.exe" ]; then
+    GITLEAKS="$(git rev-parse --show-toplevel)/tools/bin/gitleaks.exe"
+  elif [ -x "$(git rev-parse --show-toplevel)/tools/bin/gitleaks" ]; then
+    GITLEAKS="$(git rev-parse --show-toplevel)/tools/bin/gitleaks"
+  fi
+fi
+
+if [ -z "$GITLEAKS" ]; then
+  echo "secret-scan: gitleaks NOT FOUND — commit blocked." >&2
+  echo "  install it (https://github.com/gitleaks/gitleaks) or place it at tools/bin/gitleaks." >&2
+  echo "  A missing scanner is a failure, not a pass (H2)." >&2
+  exit 1
+fi
+
+"$GITLEAKS" git --staged --no-banner --redact --verbose
+status=$?
+if [ "$status" -ne 0 ]; then
+  echo "" >&2
+  echo "secret-scan: BLOCKED — gitleaks found a secret in the staged changes." >&2
+  echo "  Remove the secret, rotate the credential, never commit it." >&2
+  exit 1
+fi
+
+exit 0

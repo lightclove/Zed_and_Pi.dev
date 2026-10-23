@@ -75,6 +75,24 @@ Full rationale + sources: skill `mcp-usage` (`.pi/skills/mcp-usage/`).
   timeout/disconnect; a failed call is never success.
 - **Numbers, not opinions** (A1): "MCP is expensive/underused" → measure with `pi-cost` first.
 
+## Secrets (non-negotiable)
+
+Full evidence + measured limits: skill `secret-leak-guard` (`.pi/skills/secret-leak-guard/`).
+
+**Read = sent.** Anything that enters the transcript is already at the provider; redaction
+is a backstop, never a guarantee.
+
+- **Never read or print secrets on purpose**: no `cat .env`, `env`/`printenv`, `echo $TOKEN`,
+  `base64` of a secret file, `kubectl get secret -o yaml`.
+- **`.gitignore` is layer 1** — verify with `git check-ignore -v <path>`, don't assume.
+- **`pi-heimdall` guards are a speed bump, not a boundary** (measured: multi-line base64
+  leaks past `secret-guard`). Install it; never rely on it.
+- **gitleaks pre-commit gate is authoritative**: `gitleaks git --staged`. A missing scanner
+  blocks the commit — never treated as a pass.
+- **A gate that never caught a planted secret is untested.** Plant one, run it, revert.
+- **Secret leaked → say it, then rotate the credential.** History rewriting does not
+  un-send data.
+
 ## Hygiene
 
 - Keep the system prompt and tool set stable during a session so DeepSeek's automatic prefix

@@ -1,0 +1,26 @@
+# Secrets — never commit (see skill secret-leak-guard)
+.env
+.env.*
+!.env.example
+# secret NAMES only (no values) — used by pi-heimdall/secret-guard, must be committed
+!.env.json
+auth.json
+mcp-auth.json
+*.pem
+*.key
+*.pfx
+*.p12
+credentials.*
+secrets.*
+
+# Research scratch (scanner binaries, reproduction dirs — not part of the harness)
+.research/
+gitleaks.exe
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Serena local state
+.serena/project.local.yml
+.serena/memories/
+.serena/logs/
