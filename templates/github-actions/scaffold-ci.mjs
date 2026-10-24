@@ -1,0 +1,247 @@
+#!/usr/bin/env node
+// scaffold-ci.mjs — instantiate the universal GitHub Actions CI harness into a project.
+//
+// Usage:
+//   node scaffold-ci.mjs <target-dir> [--lang node|python|rust|go] [--force] [--dry-run]
+//
+// What it does:
+//   1. Detects the language from the project's manifests (or takes --lang).
+//   2. Builds a command set: explicit scripts/deps when available, sensible defaults otherwise.
+//   3. Writes <target>/.github/workflows/ci.yml (the contract) and copies
+//      reusable-ci.yml + actions/setup/action.yml (the canonical pipeline).
+//   4. Refuses to overwrite an existing ci.yml without --force (H2: no silent clobber).
+//
+// Edit ci.yml after generation if the defaults don't match the project.
+
+import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, copyFileSync, writeFileSync } from 'node:fs';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const SUPPORTED = ['node', 'python', 'rust', 'go'];
+
+const VERSIONS = {
+  node: '20',
+  python: '3.12',
+  rust: 'stable',
+  go: 'stable',
+};
+
+// ---------------------------------------------------------------------------
+// Args
+
+function usage() {
+  console.error('usage: node scaffold-ci.mjs <target-dir> [--lang node|python|rust|go] [--force] [--dry-run]');
+  process.exit(2);
+}
+
+function parseArgs(argv) {
+  const opts = { force: false, dryRun: false, lang: null, target: null };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--lang') {
+      opts.lang = argv[++i];
+      if (!opts.lang || !SUPPORTED.includes(opts.lang)) {
+        console.error(`error: --lang must be one of: ${SUPPORTED.join(' | ')}`);
+        process.exit(2);
+      }
+    } else if (a === '--force') opts.force = true;
+    else if (a === '--dry-run') opts.dryRun = true;
+    else if (a.startsWith('-')) usage();
+    else if (!opts.target) opts.target = a;
+    else usage();
+  }
+  if (!opts.target) usage();
+  return opts;
+}
+
+// ---------------------------------------------------------------------------
+// Detection
+
+function detectLanguage(dir) {
+  const has = (f) => existsSync(join(dir, f));
+  if (has('package.json') || has('package-lock.json') || has('pnpm-lock.yaml') || has('yarn.lock')) return 'node';
+  if (has('pyproject.toml') || has('uv.lock') || has('requirements.txt')) return 'python';
+  if (has('Cargo.toml')) return 'rust';
+  if (has('go.mod')) return 'go';
+  return null;
+}
+
+function readJson(dir, file) {
+  try {
+    return JSON.parse(readFileSync(join(dir, file), 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Command sets (defaults are a starting point — edit ci.yml if they differ)
+
+function nodeCommands(dir) {
+  const pkg = readJson(dir, 'package.json');
+  const scripts = pkg?.scripts ?? {};
+  const dev = pkg?.devDependencies ?? {};
+
+  let cache = 'npm';
+  let install = '';
+  if (existsSync(join(dir, 'pnpm-lock.yaml'))) {
+    cache = 'pnpm';
+    install = 'pnpm install --frozen-lockfile';
+  } else if (existsSync(join(dir, 'yarn.lock'))) {
+    cache = 'yarn';
+    install = 'yarn install --frozen-lockfile';
+  } else if (existsSync(join(dir, 'package-lock.json'))) {
+    install = 'npm ci';
+  } else {
+    install = 'npm install'; // no lockfile yet — commit one, then switch to `npm ci`
+  }
+
+  const lint = scripts.lint ? 'npm run lint' : '';
+  const typecheck = scripts.typecheck ? 'npm run typecheck' : ('typescript' in dev ? 'npx tsc --noEmit' : '');
+  const test = scripts.test ? 'npm test' : '';
+  return { cache, install, lint, typecheck, test, build: '' };
+}
+
+function pythonCommands(dir) {
+  const pyproject = join(dir, 'pyproject.toml');
+  const isUv =
+    existsSync(join(dir, 'uv.lock')) ||
+    (existsSync(pyproject) && readFileSync(pyproject, 'utf8').includes('[tool.uv]'));
+  const install = isUv
+    ? (existsSync(join(dir, 'uv.lock')) ? 'uv sync --locked' : 'uv sync')
+    : 'pip install -r requirements.txt';
+  return { cache: 'npm', install, lint: 'ruff check .', typecheck: 'mypy .', test: 'pytest', build: '' };
+}
+
+function rustCommands() {
+  return {
+    cache: 'npm',
+    install: '',
+    lint: 'cargo clippy --all-targets --all-features -- -D warnings',
+    typecheck: 'cargo check --all-targets',
+    test: 'cargo test',
+    build: '',
+  };
+}
+
+function goCommands() {
+  return { cache: 'npm', install: 'go mod download', lint: 'golangci-lint run', typecheck: 'go vet ./...', test: 'go test ./...', build: '' };
+}
+
+function commandsFor(lang, dir) {
+  if (lang === 'node') return nodeCommands(dir);
+  if (lang === 'python') return pythonCommands(dir);
+  if (lang === 'rust') return rustCommands();
+  return goCommands();
+}
+
+// ---------------------------------------------------------------------------
+// Rendering
+
+const y = (s) => (s ? `"${s}"` : '""');
+
+function renderCiYaml(lang, cmds) {
+  const lines = [
+    '# ci.yml — generated by scaffold-ci.mjs (templates/github-actions).',
+    '# Edit ONLY this file when commands change; reusable-ci.yml stays canonical.',
+    '',
+    'name: CI',
+    '',
+    'on:',
+    '  push:',
+    '    branches: [main, master]',
+    '  pull_request:',
+    '',
+    'permissions:',
+    '  contents: read',
+    '',
+    '# Auto-cancel the previous run of the same branch/PR: no queue of stale runs.',
+    'concurrency:',
+    '  group: ci-${{ github.ref }}',
+    '  cancel-in-progress: true',
+    '',
+    'jobs:',
+    '  ci:',
+    '    name: CI',
+    '    uses: ./.github/workflows/reusable-ci.yml',
+    '    with:',
+    `      language: ${lang}`,
+  ];
+  if (lang === 'node') lines.push(`      node-version: "${VERSIONS.node}"`, `      node-cache: ${cmds.cache}`);
+  if (lang === 'python') lines.push(`      python-version: "${VERSIONS.python}"`);
+  if (lang === 'rust') lines.push(`      rust-toolchain: "${VERSIONS.rust}"`);
+  if (lang === 'go') lines.push(`      go-version: "${VERSIONS.go}"`);
+  lines.push(
+    `      install-command: ${y(cmds.install)}`,
+    `      lint-command: ${y(cmds.lint)}`,
+    `      typecheck-command: ${y(cmds.typecheck)}`,
+    `      test-command: ${y(cmds.test)}`,
+    `      build-command: ${y(cmds.build)}`,
+    '',
+  );
+  return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// Main
+
+function main() {
+  const opts = parseArgs(process.argv.slice(2));
+  const target = resolve(opts.target);
+
+  if (!existsSync(target)) {
+    console.error(`error: target directory does not exist: ${target}`);
+    process.exit(1);
+  }
+
+  const detected = detectLanguage(target);
+  const lang = opts.lang ?? detected;
+  if (!lang) {
+    console.error('error: could not detect the language (no package.json / pyproject.toml / Cargo.toml / go.mod).');
+    console.error(`       pass --lang ${SUPPORTED.join('|')}`);
+    process.exit(1);
+  }
+  if (opts.lang && detected && opts.lang !== detected) {
+    console.warn(`warning: --lang ${opts.lang} overrides the detected ${detected}.`);
+  }
+
+  const cmds = commandsFor(lang, target);
+  const ciYaml = renderCiYaml(lang, cmds);
+
+  const files = [
+    ['workflows/ci.yml', ciYaml, 'generated'],
+    ['workflows/reusable-ci.yml', readFileSync(join(HERE, 'workflows', 'reusable-ci.yml'), 'utf8'), 'copied'],
+    ['actions/setup/action.yml', readFileSync(join(HERE, 'actions', 'setup', 'action.yml'), 'utf8'), 'copied'],
+  ];
+
+  for (const [rel, content, how] of files) {
+    const dest = join(target, '.github', rel);
+    if (existsSync(dest) && how === 'generated' && !opts.force) {
+      console.error(`error: ${dest} already exists — pass --force to overwrite (H2: no silent clobber).`);
+      process.exit(1);
+    }
+    if (opts.dryRun) {
+      console.log(`[dry-run] ${how}: .github/${rel}`);
+    } else {
+      mkdirSync(dirname(dest), { recursive: true });
+      writeFileSync(dest, content);
+      console.log(`${how}: .github/${rel}`);
+    }
+  }
+
+  console.log('');
+  console.log(`CI wired for language: ${lang}`);
+  const skipped = ['install', 'lint', 'typecheck', 'test', 'build'].filter((k) => !cmds[k]);
+  if (skipped.includes('test')) console.warn('warning: no test command — the test job will be skipped. Tests are the real gate: add them.');
+  if (lang === 'node' && !existsSync(join(target, 'package-lock.json')) && !existsSync(join(target, 'pnpm-lock.yaml')) && !existsSync(join(target, 'yarn.lock')))
+    console.warn('warning: no lockfile — install falls back to `npm install`. Commit a lockfile and switch to `npm ci`.');
+  if (skipped.includes('lint') || skipped.includes('typecheck')) console.warn('warning: some checks have no command and will be skipped — declare them when they exist.');
+  console.log('');
+  console.log('Next steps:');
+  console.log('  1. Review .github/workflows/ci.yml and adjust commands if the defaults differ.');
+  console.log('  2. Run lint + typecheck + test locally — CI must not be the first place they run (H1).');
+  console.log('  3. Commit and push; watch the first run end-to-end. Fix red checks, never disable them.');
+}
+
+main();

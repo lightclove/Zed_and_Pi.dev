@@ -1,0 +1,151 @@
+# reusable-ci.yml — the canonical, tested CI pipeline.
+# Projects do NOT fork this file. They declare inputs in ci.yml (contract, H3).
+#
+# Fail-fast order (H1): secret scan -> lint -> typecheck -> test -> build.
+# Expensive jobs are gated by the cheaper ones: a red lint kills the test run
+# before it spends minutes. lint/typecheck run in parallel after secret-scan.
+
+name: reusable-ci
+
+on:
+  workflow_call:
+    inputs:
+      language:
+        required: true
+        type: string
+        description: "Toolchain: node | python | rust | go"
+      node-version:
+        type: string
+        default: "20"
+      python-version:
+        type: string
+        default: "3.12"
+      go-version:
+        type: string
+        default: "stable"
+      rust-toolchain:
+        type: string
+        default: "stable"
+      node-cache:
+        type: string
+        default: "npm"
+        description: "setup-node cache flavor: npm | pnpm | yarn"
+      install-command:
+        type: string
+        default: ""
+        description: "Dependency install; empty = skip"
+      lint-command:
+        type: string
+        default: ""
+        description: "Empty = job skipped"
+      typecheck-command:
+        type: string
+        default: ""
+        description: "Empty = job skipped"
+      test-command:
+        type: string
+        default: ""
+        description: "Empty = job skipped"
+      build-command:
+        type: string
+        default: ""
+        description: "Empty = job skipped"
+
+# Least privilege: CI reads the repo, writes nothing.
+permissions:
+  contents: read
+
+jobs:
+  # Always on, cheapest and highest-severity gate: secrets must not reach the remote.
+  secret-scan:
+    name: "secret scan (gitleaks)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  lint:
+    name: "lint"
+    needs: secret-scan
+    if: ${{ inputs.lint-command != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup toolchain + deps
+        uses: ./.github/actions/setup
+        with:
+          language: ${{ inputs.language }}
+          node-version: ${{ inputs.node-version }}
+          python-version: ${{ inputs.python-version }}
+          go-version: ${{ inputs.go-version }}
+          rust-toolchain: ${{ inputs.rust-toolchain }}
+          node-cache: ${{ inputs.node-cache }}
+          install-command: ${{ inputs.install-command }}
+      - name: Lint
+        run: ${{ inputs.lint-command }}
+
+  typecheck:
+    name: "typecheck"
+    needs: secret-scan
+    if: ${{ inputs.typecheck-command != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup toolchain + deps
+        uses: ./.github/actions/setup
+        with:
+          language: ${{ inputs.language }}
+          node-version: ${{ inputs.node-version }}
+          python-version: ${{ inputs.python-version }}
+          go-version: ${{ inputs.go-version }}
+          rust-toolchain: ${{ inputs.rust-toolchain }}
+          node-cache: ${{ inputs.node-cache }}
+          install-command: ${{ inputs.install-command }}
+      - name: Typecheck
+        run: ${{ inputs.typecheck-command }}
+
+  test:
+    name: "test"
+    needs: [lint, typecheck]
+    if: ${{ inputs.test-command != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup toolchain + deps
+        uses: ./.github/actions/setup
+        with:
+          language: ${{ inputs.language }}
+          node-version: ${{ inputs.node-version }}
+          python-version: ${{ inputs.python-version }}
+          go-version: ${{ inputs.go-version }}
+          rust-toolchain: ${{ inputs.rust-toolchain }}
+          node-cache: ${{ inputs.node-cache }}
+          install-command: ${{ inputs.install-command }}
+      - name: Test
+        run: ${{ inputs.test-command }}
+
+  build:
+    name: "build"
+    needs: [test]
+    if: ${{ inputs.build-command != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup toolchain + deps
+        uses: ./.github/actions/setup
+        with:
+          language: ${{ inputs.language }}
+          node-version: ${{ inputs.node-version }}
+          python-version: ${{ inputs.python-version }}
+          go-version: ${{ inputs.go-version }}
+          rust-toolchain: ${{ inputs.rust-toolchain }}
+          node-cache: ${{ inputs.node-cache }}
+          install-command: ${{ inputs.install-command }}
+      - name: Build
+        run: ${{ inputs.build-command }}

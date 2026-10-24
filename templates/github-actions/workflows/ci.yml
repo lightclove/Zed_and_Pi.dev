@@ -1,0 +1,34 @@
+# ci.yml — the project's CI entry point: triggers + declared inputs (the contract).
+# Edit ONLY this file when commands change; reusable-ci.yml stays canonical.
+#
+# This is the node example. The scaffolder (templates/github-actions/scaffold-ci.mjs)
+# generates it for the detected language; edit commands if they differ.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Auto-cancel the previous run of the same branch/PR: no queue of stale runs.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      language: node
+      node-version: "20"
+      node-cache: npm
+      install-command: npm ci
+      lint-command: npm run lint
+      typecheck-command: npx tsc --noEmit
+      test-command: npm test
+      # build-command: npm run build   # uncomment when the project has a build step

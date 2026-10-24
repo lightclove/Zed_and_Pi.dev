@@ -75,6 +75,21 @@ Full rationale + sources: skill `mcp-usage` (`.pi/skills/mcp-usage/`).
   timeout/disconnect; a failed call is never success.
 - **Numbers, not opinions** (A1): "MCP is expensive/underused" → measure with `pi-cost` first.
 
+## CI/CD (GitHub Actions)
+
+Full rules + security model: skill `ci-cd` (`.pi/skills/ci-cd/`). Reusable harness:
+`templates/github-actions/` (canonical pipeline + composite setup action + scaffolder).
+
+- **Every new project gets CI at creation time** — lint/typecheck/test on every push and PR;
+  CI is the cheapest error detector (H1). Wire it with
+  `node templates/github-actions/scaffold-ci.mjs <target-dir>`.
+- **Cheap checks before expensive**: secret scan → lint → typecheck → test → build;
+  expensive jobs are gated by cheaper ones.
+- **CI (build/test) needs zero secrets**; secrets appear only at deploy and only via OIDC.
+- **Never fork the pipeline**: projects edit only `ci.yml` (the contract);
+  `reusable-ci.yml` stays canonical.
+- **Fix red jobs, never disable them**: no `|| true`, no `continue-on-error`.
+
 ## Secrets (non-negotiable)
 
 Full evidence + measured limits: skill `secret-leak-guard` (`.pi/skills/secret-leak-guard/`).
@@ -107,3 +122,6 @@ is a backstop, never a guarantee.
   - `--today` — только сессии за сегодня; `--last N` — за последние N дней.
   - `--top N` — топ-N сессий по стоимости; `--json` — машинночитаемый вывод.
   - Пример: `node tools/pi-cost/pi-cost.mjs --last 7 --top 5`.
+- `templates/github-actions/scaffold-ci.mjs` — подключить универсальный CI к проекту:
+  `node templates/github-actions/scaffold-ci.mjs <target-dir> [--lang node|python|rust|go]`
+  (правила — скилл `ci-cd`, справка — `templates/github-actions/README.md`).

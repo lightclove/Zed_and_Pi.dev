@@ -1,0 +1,82 @@
+# .github/actions/setup/action.yml — composite action: toolchain + dependency cache + install.
+# One place for per-language setup. The workflow passes `language` and commands as inputs.
+# Contract (H3): unknown language = hard failure, never a silent default.
+
+name: "Setup toolchain + deps"
+description: "Install the language toolchain, restore the dependency cache, run the install command."
+
+inputs:
+  language:
+    description: "Toolchain: node | python | rust | go"
+    required: true
+  node-version:
+    description: "Node.js version"
+    default: "20"
+  python-version:
+    description: "Python version (installed via setup-python; uv manages the venv)"
+    default: "3.12"
+  go-version:
+    description: "Go version, e.g. '1.23' or 'stable'"
+    default: "stable"
+  rust-toolchain:
+    description: "Rust toolchain channel"
+    default: "stable"
+  node-cache:
+    description: "setup-node cache flavor: npm | pnpm | yarn"
+    default: "npm"
+  install-command:
+    description: "Dependency install command; empty = skip"
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Validate language
+      shell: bash
+      run: |
+        case "${{ inputs.language }}" in
+          node|python|rust|go) ;;
+          *) echo "::error::unsupported language '${{ inputs.language }}' (expected node|python|rust|go)" >&2; exit 1 ;;
+        esac
+
+    - name: Setup Node
+      if: ${{ inputs.language == 'node' }}
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.node-cache }}
+
+    - name: Setup Python
+      if: ${{ inputs.language == 'python' }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Setup uv (cache keyed by pyproject.toml + uv.lock)
+      if: ${{ inputs.language == 'python' }}
+      uses: astral-sh/setup-uv@v10
+      with:
+        enable-cache: true
+
+    - name: Setup Rust toolchain
+      if: ${{ inputs.language == 'rust' }}
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: ${{ inputs.rust-toolchain }}
+        components: clippy,rustfmt
+
+    - name: Cache Rust build artifacts
+      if: ${{ inputs.language == 'rust' }}
+      uses: Swatinem/rust-cache@v2
+
+    - name: Setup Go
+      if: ${{ inputs.language == 'go' }}
+      uses: actions/setup-go@v7
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: true
+
+    - name: Install dependencies
+      if: ${{ inputs.install-command != '' }}
+      shell: bash
+      run: ${{ inputs.install-command }}
