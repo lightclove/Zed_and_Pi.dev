@@ -1487,7 +1487,7 @@ AGENTS.md                         ← конвенции + правила token-
 .githooks/pre-commit              ← gitleaks-гейт перед коммитом (core.hooksPath=.githooks), раздел 19
 tools/bin/gitleaks.exe            ← сканер секретов 8.30.1 (fallback для хука)
 .gitignore                        ← слой 1 защиты секретов (.env, auth.json, *.pem…)
-.pi/mcp.json                      ← MCP: serena (LSP) + playwright (браузер) + postgres (disabled)
+.pi/mcp.json                      ← MCP проекта: playwright (deferred) + postgres (disabled); serena — в global
 .serena/project.yml               ← LSP-бэкенд serena (typescript/markdown/yaml/json)
 .zed/settings.json                ← Zed LSP: vtsls, inlay hints, tab_size 2
 templates/mcp/                    ← шаблон MCP: serena + playwright + postgres (+ serena.project.yml)
@@ -1936,7 +1936,9 @@ MCP — удобный способ подключать к агенту чуж�
    `.env.example`).
 2. **Список имён секретов** в отдельном файле — по нему расширение понимает, что вырезать. Значения
    в файле не хранятся.
-3. **Расширение pi-heimdall** — блокировки и вырезание (см. выше).
+3. **Расширение pi-heimdall** — блокировки и вырезание (см. выше). На этой машине уже установлено
+   (`pi install npm:@casualjim/pi-heimdall`); проверено дважды вживую: чтение `.env` и команда с
+   именем секрета блокируются с текстом от расширения.
 4. **Проверка при коммите.** Перед каждым коммитом сканер проверяет изменения; нашёл ключ — коммит
    не проходит. Сканер можно пропустить одной командой, но это осознанное действие, а его отсутствие
    — ошибка, а не «проверено».

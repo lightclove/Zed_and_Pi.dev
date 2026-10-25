@@ -132,12 +132,13 @@ pi запрашивает при первом запуске в папке.
 агенту), все с `exposure: deferred` (инструменты не раздувают базовый промпт, а подгружаются по
 запросу через `tool_search`):
 
-- **serena** — семантические инструменты кода через LSP (`uvx --from serena-agent … --context ide
-  --project-from-cwd`, `env.PYTHONUTF8=1` для Windows cp1251); у неё есть свой веб-дашборд —
-  `http://127.0.0.1:24282/dashboard/` (раздел 13.5 руководства);
 - **playwright** — реальный браузер (`--headless --caps vision`, скриншоты в `.playwright-mcp/`);
 - **postgres** — схема и запросы (`enabled: false`, строка подключения из `${DATABASE_URL}`, в репо
   секретов нет).
+
+**serena** (LSP-семантика) живёт в глобальном конфиге `~/.pi/agent/mcp.json` — проектного дубля больше
+нет, чтобы не было дрейфа двух копий. По той же причине в global: `lsp`, `fetch`, `context7`,
+`time` (единственный `direct` — две команды времени, нужны каждый ход).
 
 #### `.pi/extensions/deepseek-router.ts`
 

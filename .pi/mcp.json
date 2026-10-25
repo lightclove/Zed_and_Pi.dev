@@ -1,17 +1,5 @@
 {
   "mcpServers": {
-    "serena": {
-      "command": "uvx",
-      "args": [
-        "--from", "serena-agent",
-        "serena", "start-mcp-server",
-        "--context", "ide",
-        "--project-from-cwd"
-      ],
-      "description": "LSP-based semantic code tools: symbols, references, definitions, and code search (Serena).",
-      "exposure": "deferred",
-      "env": { "PYTHONUTF8": "1" }
-    },
     "playwright": {
       "command": "npx",
       "args": [
