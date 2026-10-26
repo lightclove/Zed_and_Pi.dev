@@ -40,7 +40,7 @@
 **Часть IV. Продвинутый уровень**
 
 11. [Оркестрация: от одного агента к команде](#11-оркестрация-от-одного-агента-к-команде)
-12. [Свои расширения: API и эталонный код](#12-свои-расширения-api-и-эталонный-код)
+12. [Свои расширения: зачем, когда и как писать](#12-свои-расширения-зачем-когда-и-как-писать)
 13. [MCP и LSP: как к агенту подключаются инструменты](#13-mcp-и-lsp-как-к-агенту-подключаются-инструменты)
 14. [Дорожная карта освоения](#14-дорожная-карта-освоения)
 
@@ -759,7 +759,7 @@ cp .pi/extensions/deepseek-balance.ts ~/.pi/agent/extensions/   # из корн�
 
 Что делать по этим числам:
 
-- hit% падает → не переключать модель/инструменты в середине задачи (липкий роутер, раздел 11.3);
+- hit% падает → не переключать модель/инструменты в середине задачи (липкий роутер, раздел 11.4);
 - output и reasoning растут → опустить уровень мышления (`/thinking low`);
 - pro даёт основную стоимость → держать рутину на flash (раздел 7.1);
 - нужен длинный автономный прогон → планировать на off-peak.
@@ -959,174 +959,290 @@ Zed сам определяет и скачивает language servers; прое
 
 ## 11. Оркестрация: от одного агента к команде
 
-В pi **нет встроенных субагентов** как в Cursor — из коробки оркестрация собирается из примитивов, плюс
-официальный пример-расширение `subagent` (установлено) и проектное `delegate`. Правило выбора:
-**начни с наименее мощного механизма, которого достаточно.**
+### 11.1 Зачем это вообще
 
-### 11.1 Что когда использовать
+Оркестрация — громкое слово для простой вещи: **когда одного разговора с моделью перестаёт
+хватать, часть работы уходит в другие разговоры или другие процессы.** Причин ровно три, и все
+практические:
 
-| Нужно                                        | Примитив                            | Где                                |
-| -------------------------------------------- | ----------------------------------- | ---------------------------------- |
-| Постоянные инструкции для папки              | `AGENTS.md`                         | корень проекта / `~/.pi/agent/`    |
-| Переиспользуемый промпт из `/`               | Prompt template                     | `.pi/prompts/*.md`                 |
-| Инструкции + файлы под тип задачи            | Skill                               | `.pi/skills/*/SKILL.md`            |
-| Маршрутизация запросов между моделями        | Virtual model                       | extension `registerVirtualModel`   |
-| Исполняемый инструмент/команда/событие       | Extension                           | `.pi/extensions/*.ts`              |
-| Изолированные субагенты (как в Cursor)       | Extension `subagent` (офиц. пример) | `~/.pi/agent/extensions/subagent/` |
-| Параллельные tool-вызовы + фильтрация вывода | codemode                            | встроенный (`+codemode`)           |
-| Внешние инструменты (GitHub, БД, docs)       | MCP server                          | `mcp.json`                         |
-| Дистрибутив набора ресурсов                  | Pi package                          | `pi install`                       |
+1. **Деньги.** Экспертиза, которая нужна редко, не обязана жить в каждом запросе. Держать её в
+   скилле — почти бесплатно (загрузился по триггеру и всё); держать её в системном промпте —
+   платить в каждом вызове. Оркестрация начинается с вопроса «где это лежит», а не «сколько
+   агентов мне завести».
+2. **Порядок.** Черновая работа — разведка по коду, длинное ревью, план — не обязана засорять
+   главный разговор. Пусть идёт в отдельной комнате, а сюда возвращается только вывод. Иначе к
+   вечеру твой контекст наполовину состоит из черновиков, за пересылку которых ты платишь.
+3. **Специализация.** Узкий промпт делает узкую задачу лучше широкого. Разведчик с чёткими
+   инструкциями и ограниченным набором инструментов ошибается реже, чем универсальный агент,
+   который помнит всё обо всём.
 
-### 11.2 Пять уровней
+И сразу предупреждение, которое важнее всех таблиц ниже: **каждый следующий уровень сложнее в
+обслуживании.** Расширение, написанное ради задачи, которую решал скилл, — не прогресс, а долг
+(A13). Правило то же, что и всюду в этом репо: начни с наименее мощного механизма, которого
+достаточно.
 
-- **Уровень 0 — один агент + распределение моделей по уровням.** Один «мозг», адаптивная стоимость: виртуальная модель
-  `deepseek/auto` сама выбирает `flash`/`pro`. Выгода: кэш-локальность, без ручного переключения.
-- **Уровень 1 — специалисты на запрос.** Skills и шаблоны (`/plan`, `/review`, `/ship`, `code-review`)
-  дают экспертизу только когда нужно — без постоянной платы за контекст.
-- **Уровень 2 — изолированные субагенты.** Инструмент `subagent` (отдельный процесс pi; режимы
-  single/parallel/chain) и проектное `delegate` (вложенный DeepSeek-вызов). Оба изолируют контекст:
-  параллельная независимая работа (research/review/plan) не загрязняет главный контекст.
-- **Уровень 3 — исполняемые агенты.** Extension-инструменты могут вызывать другие инструменты
-  (`ctx.executeTool`) и делать вложенные LLM-вызовы (`ctx.modelRegistry.streamSimple`). Это и есть
-  «агент как код».
-- **Уровень 4 — процессная оркестрация.** Несколько `pi --print`/`--mode json`/RPC/SDK-процессов
-  параллельно — пайплайны, CI, многомодульная разработка.
+### 11.2 Лестница механизмов — от бесплатного к сложному
 
-### 11.3 Роутер `deepseek/auto`
+Половина «оркестрации» снимается одним вопросом: **может ли это сделать сам pi своими
+инструментами, если ему объяснить, как?** Если да — это не архитектура, это инструкция. Только
+когда объяснения не хватает (нужен код, отдельный процесс, внешний сервис), поднимаешься по
+лестнице. Ступени упорядочены по цене владения: чем выше, тем больше у тебя появляется кода,
+который надо поддерживать.
 
-Пользователь выбирает одну модель `deepseek/auto`, а роутер решает физическую модель на каждый запрос
-(`low` → flash, `high`/`max` → v4-pro). Три правила маршрутизации:
+| Ступень | Что это | Где живёт | Когда брать |
+|---|---|---|---|
+| **AGENTS.md** | правила, которые читаются в каждом разговоре | корень проекта, `~/.pi/agent/` | правила и конвенции; у тебя уже есть |
+| **Prompt template** | заготовка разговора, вызывается по имени | `.pi/prompts/*.md` | повторяющийся сценарий: «распланируй», «внедри и проверь» |
+| **Skill** | инструкции + файлы, грузятся по триггеру | `.pi/skills/*/SKILL.md` | экспертиза под тип задачи: ревью, CI, секреты |
+| **Virtual model** | одна модель в настройках, физическую выбирает код | расширение, `registerVirtualModel` | не хочешь думать, какая модель сейчас нужна |
+| **Extension** | исполняемый код: инструменты, команды, реакции | `.pi/extensions/*.ts` | нужен инструмент/команда, которых в pi нет |
+| **Subagent / delegate** | отдельный разговор с изолированным контекстом | расширение subagent / delegate | независимая работа, которая не должна загрязнять контекст |
+| **codemode** | JS-скрипт: много действий, в разговор попадает только итог | встроенный (`+codemode`) | десятки однотипных чтений/поисков за раз |
+| **MCP server** | внешний сервис как набор инструментов | `mcp.json` | GitHub, БД, браузер — то, что вне машины |
+| **Pi package** | упаковка всего перечисленного для раздачи | `pi install` | поделиться набором с командой |
 
-1. **Липкая маршрутизация (sticky routing).** Продолжения и повторы (retry) остаются на той же модели — иначе каждый tool-шаг = промах кэша.
-   Кэш-локальность важнее «оптимального» выбора на каждом шаге.
-2. **Изоляция контекста через делегирование.** Независимая работа — в субагенте с собственным промптом,
-   результат возвращается одной строкой. Так главный контекст не раздувается.
-3. **Состояние через дерево сессии.** Роутер хранит фазу в `state` (следует за веткой, переживает
-   компакцию); расширения хранят данные в `details` tool-результатов или `appendEntry`.
+У нас на этой машине заняты все ступени кроме последней: AGENTS.md на двух уровнях, три
+промпт-шаблона (`/implement`, `/scout-and-plan`, `/implement-and-review`), пять скиллов, роутер
+`deepseek/auto`, четыре расширения, MCP-серверы. Лестница — не меню «выбери что-нибудь одно»,
+а порядок: пробуешь снизу, поднимаешься только когда ступень перестала справляться.
 
-Использование: `/model deepseek/auto`, эскалация — `/thinking` (или `Shift+Tab`). Код — раздел 12.6.
+### 11.3 Пять уровней наращивания
 
-### 11.4 Субагенты
+**Уровень 0 — один агент, умный выбор модели.** Один разговор, но модель на каждый запрос
+выбирает роутер: дешёвая `flash` для рутины, дорогая `v4-pro` для сложного. Ничего не
+переключаешь руками, кэш не рвётся. Это не «нулевой» уровень в смысле «ничего нет» — это
+большинство твоей работы.
 
-**`subagent`** (официальный пример-расширение, установлен): модель сама вызывает его из обычного промпта:
+**Уровень 1 — специалисты по вызову.** Скиллы и промпт-шаблоны дают экспертизу только тогда,
+когда она нужна: `/review` подгружает метод ревью, `/scout-and-plan` — методику разведки и
+планирования. Плата за контекст — одна строка описания в промпте, пока специалист не вызван.
+Когда этого мало: экспертиза требует исполняемого кода или реакции на события.
 
-- `Use scout to find all authentication code` — один агент;
-- `Run 2 scouts in parallel: one for models, one for providers` — параллельно;
-- `Use a chain: scout finds X, then planner suggests Y` — цепочка (`{previous}` передаёт вывод предыдущего шага).
+**Уровень 2 — изолированные субагенты.** Работа уходит в отдельный разговор: свой промпт, своя
+история, свой счёт токенов. Параллельная независимая работа (разведка, ревью, план) не
+загрязняет главный контекст — сюда возвращается только вывод. Два механизма: `subagent`
+(отдельный процесс pi, субагент может пользоваться инструментами) и `delegate` (вложенный
+вызов модели внутри процесса, быстрее и дешевле, но субагент — чистый текст без инструментов).
+Когда этого мало: нужен инструмент, который сам внутри вызывает модель или другие инструменты.
 
-Режимы: single `{agent, task}`, parallel `{tasks: [...]}` (**макс. 8 задач, 4 одновременно**),
-chain `{chain: [...]}`. Каждый субагент = **отдельный процесс pi с изолированным контекстом**; в выводе —
-turns/токены/кэш/`$cost`/model по каждому агенту. `Ctrl+C` убивает дочерние процессы.
+**Уровень 3 — исполняемые агенты.** Расширение-инструмент, который во время вызова делает
+вложенные tool-вызовы (`ctx.executeTool`) и вложенные вызовы модели
+(`ctx.modelRegistry.streamSimple`). «Агент как код»: поведение зашито в TypeScript, модель
+только решает, когда его вызвать. Наш `delegate` — простейший пример этого уровня. Когда этого
+мало: задача больше одного процесса.
 
-Агент = markdown-файл с YAML-шапкой (пользовательские — `~/.pi/agent/agents/*.md`, проектные —
-`.pi/agents/*.md`, включаются через `agentScope: "project" | "both"`):
+**Уровень 4 — процессная оркестрация.** Несколько процессов pi параллельно: `pi --print`
+(одноразовые задания), `--mode json` (события для пайплайна), RPC, SDK. Это территория CI и
+многомодульной разработки. Здесь кончается «разговор» и начинается «инфраструктура» — подходи
+сюда последним.
+
+### 11.4 Роутер deepseek/auto: почему это работает
+
+Идея простая: ты выбираешь одну модель `deepseek/auto`, а физическую модель на каждый запрос
+выбирает код. Правило выбора: просишь думать мало (`low`) — едет `flash`; просишь `high`/`max` —
+едет `v4-pro`. Три решения роутера, и у каждого — денежная причина:
+
+1. **Липкость (sticky).** Продолжения и повторы остаются на той модели, что уже в разговоре.
+   Причина — кэш (раздел 6.2): tool-шаги — это продолжение того же поезда, и переключение
+   модели на середине = промах на весь префикс. Кэш-локальность важнее «оптимального» выбора
+   на каждом шаге.
+2. **Изоляция через делегирование.** Независимая работа уходит в субагента со своим промптом,
+   возвращается одна строка. Главный разговор не раздувается — а значит, не растёт плата за
+   пересылку истории в каждом следующем вызове.
+3. **Память на ветке.** Поле `state` роутера живёт на ветке сессии и переживает компакцию.
+   Наш роутер им пока не пользуется (проверено по коду `deepseek-router.ts` — в `route()` нет
+   `state`), но если захочешь роутер с памятью («после трёх эскалаций подряд остаться на
+   `v4-pro`») — место для этого уже есть.
+
+Использование: `/model deepseek/auto`, эскалация — `/thinking high` или `Shift+Tab` (сверено:
+`app.thinking.cycle` в `docs/keybindings.md`).
+
+### 11.5 Субагенты: как это выглядит руками
+
+**Что такое агент.** Markdown-файл с шапкой и системным промптом. Вот настоящий установленный
+агент (сокращённо, полностью — `~/.pi/agent/agents/scout.md`):
 
 ```markdown
 ---
-name: reviewer
-description: Code review specialist
+name: scout
+description: Fast codebase recon that returns compressed context for handoff
 tools: read, grep, find, ls, bash
-model: deepseek/deepseek-v4-pro
+model: deepseek/deepseek-flash
 ---
 
-Системный промпт агента...
+You are a scout. Quickly investigate a codebase and return structured findings...
 ```
 
-Поля: `name`, `description`, `tools`, `model` (формат `provider/id`; нет — наследует модель и уровень
-мышления родительской сессии). Агенты перечитываются при каждом вызове — правки без рестарта. Установка и
-адаптация под DeepSeek — раздел 16.2. Workflow-пресеты: `/implement` (scout→planner→worker),
-`/scout-and-plan`, `/implement-and-review` (промпт-шаблоны `~/.pi/agent/prompts/*.md`).
+Шапка — это всё, что модель знает об агенте до вызова: `name`, `description` (по нему модель
+решает, кого звать), `tools` (чем агенту разрешено пользоваться), `model` (нет поля — наследует
+модель и уровень мышления родительской сессии; сверено с кодом subagent: `inheritsDispatchConfig
+= !agent.model`). Файлы лежат в `~/.pi/agent/agents/*.md` (личные) и `.pi/agents/*.md`
+(проектные, подключаются через `agentScope: "both"`). Агенты перечитываются при каждом вызове —
+правки подхватываются без рестарта.
 
-**`delegate`** (проектное расширение): то же самое, но одним вложенным вызовом DeepSeek внутри процесса
-pi — быстрее и дешевле, чем отдельный процесс. Код — раздел 12.7.
+**Как выглядит использование.** Одна фраза в обычном чате:
 
-### 11.5 Принципы
+- «Use scout to find all authentication code» — один агент, режим `single`;
+- «Run 2 scouts in parallel: one for models, one for providers» — режим `parallel`
+  (до 8 задач, 4 одновременно — константы `MAX_PARALLEL_TASKS = 8`, `MAX_CONCURRENCY = 4` в
+  исходнике subagent);
+- «Use a chain: scout finds X, then planner suggests Y» — режим `chain`: вывод каждого шага
+  передаётся следующему через `{previous}`.
 
-- **События вместо опроса (polling).** `pi.on(...)` (agent/tool/session/message события) для реакций и гейтов.
-- **Параллельность через codemode / процессы.** Независимые чтения и greps — в `Promise.allSettled`;
-  независимые задачи — в параллельные `pi --print`.
-- **Экспертная эскалация.** Классификаторы (`models.classify`) могут выбирать модель по сложности задачи
-  без ручного вмешательства (пример — `jev-router.ts` в `examples/extensions/`).
+Каждый субагент — отдельный процесс pi со своим контекстом; в выводе по каждому агенту — число
+ходов, токены, кэш и стоимость (`turns/токены/кэш/$cost/model`, сверено с кодом: вывод собирается
+из `usage`). Прерывание доходит до детей: по abort-сигналу дочерний процесс получает SIGTERM,
+через 5 секунд SIGKILL (сверено с кодом subagent).
 
-## 12. Свои расширения: API и эталонный код
+**Когда `delegate` вместо `subagent`.** `delegate` — вложенный вызов DeepSeek внутри процесса
+pi: не тратит время на запуск отдельного процесса, платишь ровно за один вызов. Ограничение
+честное: субагент `delegate` — чистый текст без инструментов, он не умеет читать файлы. Правило
+простое: надо, чтобы субагент ходил по репозиторию, — `subagent`; надо быстрое «второе мнение»
+по тексту — `delegate`.
 
-Расширение — TypeScript-модуль с default-фабрикой `(pi: ExtensionAPI) => void`. Pi использует `jiti`,
-компиляция не нужна. Файлы: `~/.pi/agent/extensions/` (глобально) или `.pi/extensions/` (проект).
+### 11.6 Три принципа, которые не зависят от механизма
 
-### 12.1 ExtensionAPI — главные методы
+1. **События вместо опроса.** Хочешь реагировать на происходящее (агент начал ответ, сессия
+   сжалась, вызов инструмента) — подпишись на событие (`pi.on(...)`), не спрашивай состояние в
+   цикле. Опрос — это код, который всё время работает и всё время устаревает.
+2. **Параллельность через codemode или процессы.** Независимые чтения и поиски — в
+   `Promise.allSettled` внутри одного codemode-скрипта; независимые задачи — в параллельные
+   процессы. Последовательность там, где нет зависимости, — это просто медленнее.
+3. **Эскалация по факту, а не по ручке.** Классификаторы (`models.classify`) умеют оценивать
+   сложность и выбирать модель без твоего участия — пример `jev-router.ts` лежит в
+   `examples/extensions/` установки pi. Ручное переключение — на крайний случай, у него цена
+   кэш-промаха.
 
-| Метод                                                          | Назначение                               |
-| -------------------------------------------------------------- | ---------------------------------------- |
-| `pi.registerTool(tool)`                                        | LLM-вызываемый инструмент (`defineTool`) |
-| `pi.registerCommand(name, {description, handler})`             | `/команда`                               |
-| `pi.registerShortcut(key, {handler})` / `pi.registerFlag(...)` | шорткаты / CLI-флаги                     |
-| `pi.registerProvider(...)` / `pi.registerMcpServer(...)`       | свой провайдер / MCP-сервер              |
-| `pi.registerVirtualModel({...})`                               | виртуальная модель-роутер                |
-| `pi.on(event, handler)`                                        | подписка на события                      |
-| `pi.sendMessage(...)` / `pi.sendUserMessage(...)`              | сообщения агенту из кода                 |
-| `pi.appendEntry(customType, data)`                             | долговечное состояние вне контекста      |
-| `pi.getActiveTools()` / `pi.setActiveTools([...])`             | управление активными инструментами       |
-| `pi.getSettings()` / `pi.getCommands()`                        | настройки / команды                      |
-| `pi.exec(cmd, args)`                                           | shell из расширения                      |
-| `pi.setModel(...)` / `pi.setThinkingLevel(...)`                | смена модели/мышления                    |
+## 12. Свои расширения: зачем, когда и как писать
 
-### 12.2 События (выборочно)
+### 12.1 Что такое расширение — простыми словами
 
-`project_trust`, `session_start/_shutdown/_tree`, `session_before_compact/_fork/_switch`,
-`agent_start/_end/_before_settle/_settled`, `turn_start/_end`, `message_start/_update/_end`,
-`tool_call` (можно блокировать/мутировать), `tool_result` (можно редактировать),
-`tool_execution_start/_update/_end`, `context` / `context_with_system` (трансформация контекста),
-`before_provider_request/_headers`, `after_provider_response`, `provider_stream_event`,
-`model_select`, `thinking_level_select`, `user_bash`, `input`.
+Расширение — маленькая программа на TypeScript, которую pi запускает при старте (компиляция не
+нужна: pi читает TS на лету через jiti — сверено с `docs/extensions.md`). Живёт она внутри
+процесса pi и умеет три вещи: дать агенту новый инструмент, завести команду или шорткат,
+реагировать на события. Аналогия — плагин к редактору: не отдельная программа, а надстройка.
 
-Паттерн permission-gate (подтверждать опасные вызовы) — через `tool_call` + `pi.getAllTools()` annotations
-(`readOnlyHint` / `destructiveHint` / `idempotentHint` / `openWorldHint`).
+Два честных предупреждения из документации, которые стоит прочитать до первого файла:
 
-### 12.3 Контексты и ModelRegistry
+- расширение работает **с правами процесса pi** — оно видит промпты, вызовы инструментов,
+  файлы и учётные данные. Грузить только из доверенных источников;
+- в фабрике расширения **нельзя** запускать процессы, сокеты и таймеры: pi загружает расширения
+  и без старта сессии. Долгоживущие ресурсы — из обработчика `session_start`, закрытие — в
+  `session_shutdown`.
 
-- **ExtensionContext** (события): `ui`, `mode`, `cwd`, `sessionManager`, `modelRegistry`, `model`,
-  `scopedModels`, `thinkingLevel`, `isIdle()`, `isProjectTrusted()`, `signal`, `abort()`,
-  `getContextUsage()`, `compact()`, `getSystemPrompt()`.
-- **ExtensionToolContext** (execute инструмента) = + `tools` + `executeTool(name, args, opts)` (вложенные
-  tool-вызовы, не попадают в транскрипт, учитываются в `nestedCalls`).
-- **ExtensionCommandContext** (команды) = + `waitForIdle()`, `newSession()`, `fork()`, `navigateTree()`,
-  `switchSession()`, `reload()`, `getSystemPromptOptions()`.
+Когда расширение **не** нужно: если задачу решает скилл или CLI-скрипт — расширение не нужно
+(A13). На этой машине их четыре, и каждое закрывает то, что иначе не решалось: `subagent`
+(официальный пример, отдельные процессы), `deepseek-router` (выбор модели), `delegate` (быстрое
+второе мнение), `deepseek-balance` (остаток денег в футере).
 
-```ts
-ctx.modelRegistry.find(provider, id)                       // модель по id
-ctx.modelRegistry.findOfType("classifier", p, id)          // классификатор
-ctx.modelRegistry.complete(model, context, options?)       // Promise<AssistantMessage>
-ctx.modelRegistry.streamSimple(model, context, options?)   // AssistantMessageEventStream (+ .result())
-ctx.modelRegistry.classify(model, {state, questions})      // классификация
-ctx.modelRegistry.generateImages(model, {input})           // генерация изображений
-ctx.modelRegistry.registerVirtualModel(def)                // регистрация роутера
+### 12.2 Первое расширение, построчно
+
+Минимальный пример — из официальной документации (`docs/extensions.md`), сокращён до сути.
+Файл `hello.ts`:
+
+```typescript
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+
+export default function (pi: ExtensionAPI) {
+  pi.registerCommand("hello", {
+    description: "Show a greeting",
+    handler: async (name, ctx) => {
+      ctx.ui.notify(`Hello, ${name || "world"}!`, "info");
+    },
+  });
+}
 ```
 
-`Context` = `{ systemPrompt?, messages: Message[], tools? }`; `Message` имеет `role` и `timestamp`.
+По строкам: `export default function (pi)` — фабрика, pi зовёт её при загрузке и передаёт
+`ExtensionAPI`, твой «пульт»; `pi.registerCommand` — регистрируешь команду `/hello`;
+`description` — что показывать в подсказках; `handler` — что выполнить, `name` — то, что ты
+написал после `/hello`. Загрузка: файл кладётся в `~/.pi/agent/extensions/` (глобально) или
+`.pi/extensions/` (проект, грузится после доверия проекту), потом `/reload`. Для отладки одного
+файла без установки: `pi --extension ./hello.ts`.
 
-### 12.4 Виртуальная модель: поля `route(request, ctx)`
+Это весь входной билет: всё остальное в этой главе — разные грани того же самого `pi.*`.
 
-| Поле `request`           | Значение                                                        |
-| ------------------------ | --------------------------------------------------------------- |
-| `model`, `thinkingLevel` | выбранная виртуальная модель и уровень                          |
-| `reason`                 | `user` / `continuation` / `retry` / `direct`                    |
-| `previous`               | физическая модель+уровень последнего успешного ответа           |
-| `failed`                 | для `retry`: физическая модель+уровень+message упавшего запроса |
-| `state`                  | состояние роутера на ветке (JSON, переживает компакцию)         |
-| `messages`               | конверсация запроса                                             |
-| `signal`                 | abort-сигнал                                                    |
+### 12.3 Три роли расширения — на наших примерах
 
-Возврат: `{ model, thinkingLevel, state? }`. Нельзя роутить на другую виртуальную модель.
+1. **Инструмент для агента.** `delegate.ts` регистрирует инструмент через `pi.registerTool`.
+   Дальше модель сама решает, когда его вызвать — увидев описание «run an isolated sub-agent…
+   use for independent work without polluting the main context». Расширение не «пишет за
+   агента» — оно добавляет ему в арсенал новую способность.
+2. **Виртуальная модель.** `deepseek-router.ts` регистрирует модель `deepseek/auto`, которой
+   физически нет — есть только правило выбора (раздел 11.4). Для тебя это обычная модель в
+   `/model`; внутри — код, который решает на каждый запрос.
+3. **Реакция на события и статус.** `deepseek-balance.ts` подписывается на `session_start` и
+   `message_end`, спрашивает у DeepSeek баланс, вычитает траты сессии и рисует строку
+   «deepseek $46.44 left · this session -$0.149» через `ctx.ui.setStatus`. Никакого участия
+   модели — чистые события.
 
-### 12.5 Codemode (JS-скрипты)
+### 12.4 Контексты: почему пультов четыре
 
-Включение: `"defaultTools": ["+codemode"]`. Модель пишет JS, который вызывает инструменты и не-LLM модели;
-в контекст попадает только вывод скрипта. Глобальные: `tools.<name>(args)` (parallel-safe), `text()`,
-`image()`, `console.log()`, `return`, `exit()`, `store(key,value)`/`load(key)`, `ALL_TOOLS`,
-`searchTools(query)`, `describeTool(name)`, `describeNamespace(name)`, `models.*`.
+Код расширения выполняется в разных ролях, и в каждой роли у него разный «пульт» (`ctx`):
 
-```js
-// @options: {"max_output_tokens": 2000, "timeout_ms": 60000}
+- **событие** (`ExtensionContext`) — пульт сессии: UI, cwd, менеджер сессий, реестр моделей,
+  текущая модель и уровень, `getContextUsage()`, `compact()`, `getSystemPrompt()`;
+- **инструмент** (`ExtensionToolContext`) — всё то же **плюс** `executeTool`: во время
+  обработки вызова можно вызывать другие инструменты (эти вызовы не попадают в транскрипт, но
+  считаются в `nestedCalls`) — это и есть «уровень 3» из 11.3;
+- **команда** (`ExtensionCommandContext`) — плюс управление сессией: `newSession()`, `fork()`,
+  `switchSession()`, `waitForIdle()`, `reload()`;
+- **вложенный код** (codemode-скрипт) — вообще другой мир, см. 12.7.
+
+Не запоминай списки полей — запомни вопрос: «в какой роли я сейчас пишу код и что мне из этой
+роли доступно?». Полные списки — в справочнике `PI_EXTENSION_API_REFERENCE.md`.
+
+### 12.5 Как из кода поговорить с моделью (ModelRegistry)
+
+`ctx.modelRegistry` — способ вызвать модель из расширения, минуя разговор. Три метода,
+которыми это решается на практике:
+
+- `find(provider, id)` — взять модель из каталога (например, `find("deepseek",
+  "deepseek-flash")`). Без этого остальные методы не вызвать;
+- `complete(model, context)` — один вызов, дождался ответа целиком;
+- `streamSimple(model, context)` — поток, из которого берёшь финальный
+  `AssistantMessage` через `await stream.result()`.
+
+Именно так устроен `delegate`: `find` → `streamSimple` со своим системным промптом и одним
+сообщением → `result()` → текст в ответ инструмента. То есть **субагент уровня 2 — это не
+магия, а `streamSimple` с чужим промптом**. Ещё в реестре есть `classify` (не-LLM
+классификаторы, дешёвая оценка «к какой категории относится текст») и `generateImages` —
+подробности в справочнике.
+
+### 12.6 Виртуальная модель: что знает роутер в момент решения
+
+Каждый запрос pi спрашивает твою функцию `route(request, ctx)`: «куда едем?» И даёт всё, что
+нужно для честного ответа:
+
+- `reason` — почему запрос: `user` (ты что-то написал), `continuation` (tool-шаг в ответ на
+  инструмент), `retry` (повтор после сбоя), `direct` (явный выбор);
+- `previous` — какая физическая модель и уровень успешно ответили в прошлый раз;
+- `failed` — для `retry`: что именно упало;
+- `state` — память роутера на этой ветке (JSON, переживает компакцию);
+- `messages`, `signal` — сам запрос и сигнал отмены.
+
+Ответ — `{ model, thinkingLevel, state? }`. Ограничение: перенаправить на другую виртуальную
+модель нельзя. Теперь наш роутер читается как книга (полный листинг — в справочнике):
+
+> Продолжения и повторы остаются на прежней модели — «липкость» ради кэша. Новый вопрос с
+> `high`/`max` — едем на `v4-pro` с тем же уровнем. Всё остальное — `flash` на `low`.
+
+### 12.7 Codemode: скрипты для тех, кому рано писать расширения
+
+Codemode — встроенный инструмент (подключается строкой `"+codemode"` в `defaultTools`).
+Механика простая: модель пишет маленький JS-скрипт, скрипт выполняет инструменты, а **в
+разговор попадает только итог** — не промежуточные результаты. Зачем: тридцать чтений по
+одному вызову дешевле, чем тридцать раундов разговора, и не засоряют контекст.
+
+Что доступно в скрипте: `tools.<имя>(args)` (вызовы инструментов, можно параллелить),
+`text()`, `console.log()`, `return` (это и есть вывод, который увидит модель), `store()`/`load()`
+(память между скриптами), `searchTools()`/`describeTool()` (поиск необъявленных инструментов),
+`models.*` (не-LLM модели: классификаторы, генерация изображений). Первой строкой можно задать
+бюджет вывода: `// @options: {"max_output_tokens": 2000, "timeout_ms": 60000}`.
+
+Типичный сценарий — три независимых поиска параллельно:
+
+```javascript
 const [a, b, c] = await Promise.allSettled([
   tools.grep({ pattern: "TODO" }),
   tools.find({ pattern: "**/*.spec.ts" }),
@@ -1135,157 +1251,38 @@ const [a, b, c] = await Promise.allSettled([
 return [a, b, c].map((r) => (r.status === "fulfilled" ? r.value : "ERR"));
 ```
 
-`bash` в скриптах возвращает `{ output, truncated, full_output_path?, exit_code, wall_time_seconds }`.
-Лимиты: 256MB памяти, `max_output_tokens` 10000 по умолчанию, нет Node/файловой системы/сети/таймеров.
+Честные границы (сверено с `docs/codemode.md` и описанием инструмента): памяти у виртуальной
+машины 256 MB; вывод по умолчанию режется до 10 000 токенов (полный текст — во временный файл);
+внутри нет Node, файловой системы, сети и таймеров — песочница, а не второй bash. Поэтому
+codemode — это «собрать и посчитать», а не «скачать и установить»; для второго есть bash.
 
-### 12.6 Эталонный код 1: роутер (`.pi/extensions/deepseek-router.ts`)
+### 12.8 Эталонные коды: что доказывают router и delegate
 
-```ts
-import type {
-  ExtensionAPI,
-  ExtensionContext,
-  ModelRoute,
-  ModelRouteRequest,
-} from "@earendil-works/pi-coding-agent";
+Оба файла лежат в `.pi/extensions/` этого репозитория, полные листинги — в справочнике
+`PI_EXTENSION_API_REFERENCE.md`. Здесь — идеи, ради которых они существуют.
 
-const PROVIDER = "deepseek";
-const FLASH = "deepseek-flash";
-const PRO = "deepseek-v4-pro";
+**`deepseek-router.ts`** доказывает три вещи: виртуальную модель регистрирует обычное
+расширение; проверка каталога обязательна (`ctx.modelRegistry.find` может не найти модель —
+тогда громкая ошибка, а не тихое «поехали на чём-нибудь»); липкая маршрутизация — это всего
+лишь `if (request.reason !== "user")` с возвратом предыдущей модели.
 
-function routeTo(
-  request: ModelRouteRequest,
-  ctx: ExtensionContext,
-  id: string,
-  level: string,
-): ModelRoute {
-  const model = ctx.modelRegistry.find(PROVIDER, id);
-  if (!model) throw new Error(`Model ${PROVIDER}/${id} is not in the catalog`);
-  return { model, thinkingLevel: level };
-}
+**`delegate.ts`** доказывает четыре: модель для субагента берётся из реестра, а не пишется
+строкой; `streamSimple` + `await stream.result()` дают финальный ответ; `usage` из ответа
+пробрасывается в результат инструмента — **иначе сессия не посчитает стоимость субагента**, и
+твой `pi-cost` будет врать; ошибка возвращается громко (`isError`, текст ошибки), а не молчаливым
+«(empty response)». Последнее — не стиль, а правило (A2): сломанный делегированный вызов не
+должен выглядеть как успешный.
 
-export default function (pi: ExtensionAPI) {
-  pi.registerVirtualModel({
-    provider: PROVIDER,
-    id: "auto",
-    name: "Auto (flash ↔ pro)",
-    thinkingLevels: ["low", "high", "max"],
-    contextWindow: 1_000_000,
-    maxTokens: 384_000,
-    route(request, ctx) {
-      // Продолжения/повторы (retry) остаются на предыдущей модели, чтобы кэш не сбрасывался.
-      if (request.reason !== "user") {
-        const sticky = request.failed ?? request.previous;
-        if (sticky)
-          return {
-            model: sticky.model,
-            thinkingLevel: sticky.thinkingLevel ?? "low",
-          };
-      }
-      // Эскалация только по явному high/max.
-      if (request.thinkingLevel === "high" || request.thinkingLevel === "max") {
-        return routeTo(request, ctx, PRO, request.thinkingLevel);
-      }
-      return routeTo(request, ctx, FLASH, "low");
-    },
-  });
-}
-```
+### 12.9 Где полная справка
 
-### 12.7 Эталонный код 2: delegate (`.pi/extensions/delegate.ts`)
-
-```ts
-import { Type, type TextContent } from "@earendil-works/pi-ai";
-import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-const delegateTool = defineTool({
-  name: "delegate",
-  label: "Delegate",
-  description:
-    "Run an isolated DeepSeek sub-agent with its own system prompt and a focused task. " +
-    "Use for independent work (planning, reviewing, researching) without polluting the main context.",
-  parameters: Type.Object({
-    role: Type.String({
-      description: "System prompt / persona for the sub-agent.",
-    }),
-    task: Type.String({ description: "The focused task or question." }),
-    model: Type.Optional(
-      Type.String({
-        description: "deepseek-flash (default) or deepseek-v4-pro.",
-      }),
-    ),
-  }),
-
-  async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-    const modelId =
-      params.model === "deepseek-v4-pro" ? "deepseek-v4-pro" : "deepseek-flash";
-    const model = ctx.modelRegistry.find("deepseek", modelId);
-    if (!model) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: `delegate: model deepseek/${modelId} is not available`,
-          },
-        ],
-        details: { error: "model-not-found", modelId },
-        isError: true,
-      };
-    }
-    const reasoning = modelId === "deepseek-v4-pro" ? "high" : "low";
-    try {
-      const stream = ctx.modelRegistry.streamSimple(
-        model,
-        {
-          systemPrompt: params.role,
-          messages: [
-            { role: "user", content: params.task, timestamp: Date.now() },
-          ],
-        },
-        { reasoning, maxTokens: 8_000, signal },
-      );
-      const message = await stream.result();
-      const text = message.content
-        .filter((block): block is TextContent => block.type === "text")
-        .map((block) => block.text)
-        .join("\n")
-        .trim();
-      if (message.stopReason === "error" || message.errorMessage) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `delegate error: ${message.errorMessage ?? "unknown"}`,
-            },
-          ],
-          details: { error: message.errorMessage, modelId },
-          isError: true,
-          usage: message.usage,
-        };
-      }
-      return {
-        content: [{ type: "text", text: text || "(empty response)" }],
-        details: { modelId, stopReason: message.stopReason },
-        usage: message.usage,
-      };
-    } catch (error) {
-      return {
-        content: [{ type: "text", text: `delegate failed: ${String(error)}` }],
-        details: { error: String(error), modelId },
-        isError: true,
-      };
-    }
-  },
-});
-
-export default function (pi: ExtensionAPI) {
-  pi.registerTool(delegateTool);
-}
-```
-
-Ключевые идеи: `ctx.modelRegistry.find` → модель; `streamSimple` + `await stream.result()` → финальный
-`AssistantMessage`; `usage` пробрасывается в результат, чтобы сессия корректно считала стоимость субагента;
-валидация на границе и явная ошибка при обрыве/аборте вместо молчаливого «(empty response)».
-
+- **Официально:** `docs/extensions.md` в установке pi (путь — в начале этого документа) — полный
+  список методов `ExtensionAPI`, событий и полей контекстов. Это первоисточник, сверяй с ним.
+- **В этом репо:** `PI_EXTENSION_API_REFERENCE.md` — выжимка таблиц (методы, события, контексты,
+  поля `route`, глобальные codemode) и полные листинги роутера и delegate. Справочник, а не
+  учебник: открывать, когда пишешь код, а не читать от корки до корки.
+- **Примеры:** `examples/extensions/` в установке pi — семь десятков готовых расширений
+  (`hello.ts`, `todo.ts`, `jev-router.ts`, `permission-gate.ts` и др.). Когда не знаешь, как
+  выглядит паттерн, — смотри пример, он короче документации.
 ## 13. MCP и LSP: как к агенту подключаются инструменты
 
 В разделе 12 мы писали инструменты сами. Но чаще писать не нужно — достаточно подключить готовые. Для
@@ -1576,14 +1573,14 @@ pi mcp list          # проверка
    Привыкни к `Ctrl+End`/`PageUp`/`PageDown` и `Ctrl+O`.
 5. **Наблюдай за деньгами:** `showCacheMissNotices`, `/session` и `pi-cost` после каждой задачи
    (раздел 7). Найди, где промахи кэша и лишние reasoning-токены.
-6. **Собери специалистов:** добавь skills и шаблоны под свой стек (раздел 11.2, уровень 1). Прочитай
+6. **Собери специалистов:** добавь skills и шаблоны под свой стек (раздел 11.3, уровень 1). Прочитай
    `docs/skills.md`, `docs/prompt-templates.md`.
-7. **Включи субагентов:** `subagent` (раздел 11.4) + `delegate` для параллельного ревью/исследования.
+7. **Включи субагентов:** `subagent` (раздел 11.5) + `delegate` для параллельного ревью/исследования.
 8. **Подключи MCP:** GitHub / filesystem / твоя БД (раздел 13). Прочитай `docs/mcp.md`; у Serena
    загляни в её веб-дашборд (раздел 13.5).
 9. **Напиши первое расширение:** permission-gate (`tool_call` + hints) или todo-подобный инструмент
    (раздел 12). Примеры: `examples/extensions/` в установке pi (`hello.ts`, `todo.ts`, `jev-router.ts`).
-10. **Выйди на процессы:** `pi --print`-пайплайны, потом JSON/RPC/SDK для автоматизации и CI (раздел 11.2,
+10. **Выйди на процессы:** `pi --print`-пайплайны, потом JSON/RPC/SDK для автоматизации и CI (раздел 11.3,
     уровень 4).
 
 Полезные файлы для чтения (в установке pi, `node_modules/@earendil-works/pi-coding-agent/docs/`):
@@ -1602,8 +1599,8 @@ pi mcp list          # проверка
 ```
 AGENTS.md                         ← конвенции + правила token-economy
 .pi/settings.json                 ← +grep/find/ls, +codemode, +tool_search, hideThinkingBlock, кэш-нотисы
-.pi/extensions/deepseek-router.ts ← виртуальная модель deepseek/auto (flash↔pro), раздел 12.6
-.pi/extensions/delegate.ts        ← инструмент delegate (изолированные субагенты), раздел 12.7
+.pi/extensions/deepseek-router.ts ← виртуальная модель deepseek/auto (flash↔pro), раздел 12.8
+.pi/extensions/delegate.ts        ← инструмент delegate (изолированные субагенты), раздел 12.8
 .pi/extensions/deepseek-balance.ts← живой баланс DeepSeek в футере + /balance
 .pi/prompts/plan.md               ← /plan (+ гейты Гамильтон/Акин)
 .pi/prompts/review.md             ← /review (+ гейты Гамильтон/Акин)
