@@ -38,6 +38,11 @@ Rules below are the compressed, actionable version.
    session with `tools/pi-cost` instead of guessing.
 7. **Stable toolset = warm cache.** Don't flip exposure or server modes mid-session: a stable
    prompt + tool set keeps the DeepSeek prefix cache hot (cache hit ≈ 30–50× cheaper than miss).
+8. **Config duplicates ≠ extra processes.** One server name in both global and project config:
+   the project entry replaces the global one — still one connection per session. But every open
+   session spawns its own instance with a full process tree (measured: 11–25 processes,
+   129–429 MB per tree). Memory is spent by **sessions**, not config lines — close idle sessions.
+   `pi mcp list` shows connections, not processes; process count lives in the OS task list.
 
 ## Decide: skill/CLI or MCP server?
 
