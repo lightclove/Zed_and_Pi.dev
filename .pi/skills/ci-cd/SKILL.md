@@ -6,7 +6,8 @@ description: Universal CI/CD with GitHub Actions for any project — when to add
 # CI/CD с GitHub Actions (универсально)
 
 Переиспользуемый харнесс: `templates/github-actions/` (в этом репозитории).
-Полная справка, модель безопасности и числа: `references/github-actions.md`.
+Полная справка, модель безопасности и числа: `references/github-actions.md`
+(§Index вверху файла — читать нужный раздел, не весь файл).
 
 ## Правила
 

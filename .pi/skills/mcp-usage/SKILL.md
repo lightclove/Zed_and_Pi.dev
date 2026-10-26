@@ -5,7 +5,8 @@ description: Token-efficient MCP usage in pi — pick the right exposure (direct
 
 # MCP usage (token-efficient)
 
-Full rationale, numbers, and sources: `references/mcp-economics.md`.
+Full rationale, numbers, and sources: `references/mcp-economics.md` — §Index вверху: §4 матрица
+выбора, §6 сценарии и миграция, §5 числа. Read the § you need, not the whole file.
 Rules below are the compressed, actionable version.
 
 ## Decision: how to give the agent a capability

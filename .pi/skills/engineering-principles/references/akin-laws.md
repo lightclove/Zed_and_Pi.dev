@@ -10,6 +10,16 @@ different numbering (e.g., "never enough time to do it right" was Ranger's Law #
 Each law is quoted verbatim from the source, followed by how it maps to this harness
 (design of tools, extensions, sub-agent pipelines, prompts).
 
+## Index — читать только нужный диапазон
+
+| Законы | Когда читать |
+|---|---|
+| 1–6 | планируешь замеры, борешься с преждевременными выводами (A1, A10) |
+| 7–14 | дизайн, требования, YAGNI (A13/A14) |
+| 15–22 | интерфейсы, проверка чужих ответов, документация (A15, A16, A19, A22) |
+| 23–32 | оценки сроков/объёма, декомпозиция работ |
+| 33–45 | программные реальности, «сначала заставь работать» (A40) |
+
 1. **Engineering is done with numbers. Analysis without numbers is only an opinion.**
    → Every claim about cost, speed, or quality needs a measurement (pi-cost, usage, timings).
 2. **To design a spacecraft right takes an infinite amount of effort. This is why it's a

@@ -7,7 +7,9 @@ description: Engineering discipline for design and orchestration decisions — M
 
 Two sources govern every design and orchestration decision in this harness:
 Margaret Hamilton (Apollo flight software) and Akin's Laws of Spacecraft Design.
-Canonical lists + mapping to this harness: `references/hamilton.md`, `references/akin-laws.md`.
+Canonical lists + mapping to this harness: `references/hamilton.md` (H1–H5, один § на
+принцип), `references/akin-laws.md` (§Index вверху: 1–6 числа/ошибки, 7–14 требования,
+15–22 интерфейсы/проверка, 23–45 программные реальности).
 
 ## Core rules, applied to this harness
 

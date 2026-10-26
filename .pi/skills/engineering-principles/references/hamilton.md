@@ -14,6 +14,16 @@ Background reading (URL verified reachable): WIRED, October 2015 —
 "Her Code Got Humans on the Moon — and Invented Software Itself":
 <https://www.wired.com/2015/10/margaret-hamilton-nasa-apollo/>
 
+## Index — читать только нужный §
+
+| § | Когда читать |
+|---|---|
+| §1 | H1: дешёвая проверка раньше дорогой — планирование проверок |
+| §2 | H2: обнаружение и восстановление в работе, не молчание |
+| §3 | H3: контракт и валидация на границе |
+| §4 | H4: define before the fact — план до кода |
+| §5 | H5: сокращений нет; шаг → проверка → коммит |
+
 ## 1. Detect errors as early as possible
 
 Paraphrase: the decision was to design software so that errors could be detected during
