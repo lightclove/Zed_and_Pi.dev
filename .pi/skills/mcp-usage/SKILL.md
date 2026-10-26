@@ -1,6 +1,6 @@
 ---
 name: mcp-usage
-description: Token-efficient MCP usage in pi — pick the right exposure (direct/deferred/codemode), discover deferred tools via tool_search, batch uniform calls in codemode, prefer skills/CLI for narrow ops. Use when wiring a new MCP server, choosing between skill/CLI/MCP for a capability, or planning bulk MCP calls.
+description: Token-efficient MCP usage in pi — pick the right exposure (direct/deferred/codemode), discover deferred tools via tool_search, batch uniform calls in codemode, prefer skills/CLI for narrow ops, migrate an MCP server to a skill. Use when wiring a new MCP server, choosing between skill/CLI/MCP for a capability, migrating an MCP server to a skill, or planning bulk MCP calls.
 ---
 
 # MCP usage (token-efficient)
@@ -38,6 +38,27 @@ Rules below are the compressed, actionable version.
    session with `tools/pi-cost` instead of guessing.
 7. **Stable toolset = warm cache.** Don't flip exposure or server modes mid-session: a stable
    prompt + tool set keeps the DeepSeek prefix cache hot (cache hit ≈ 30–50× cheaper than miss).
+
+## Decide: skill/CLI or MCP server?
+
+**Skill/CLI wins** (≈0 tokens until use, no server to run): browser automation via a CDP
+script, document formats (PDF/DOCX/XLSX/PPTX), workflows/checklists (PR review, commit format,
+PRD), local CLI ops (git, `gh`), public APIs without auth, in-house scripts.
+
+**MCP still wins**: OAuth with token refresh (unless a CLI already does auth, e.g. `gh`),
+team-wide centralisation (update server → everyone has it; shared cache, rate limits, audit),
+SDK/API mode where the skill has no network access. See `references/mcp-economics.md` §6.
+
+## Recipe: migrate one MCP server to a skill
+
+1. List the MCP servers actually used, not all configured. Drop unused ones first (cheaper than migrating).
+2. For each, look for a CLI/API equivalent — can the same actions run from terminal commands?
+3. If yes: create `skills/<name>/SKILL.md` + scripts; let the agent generate the first draft.
+4. `enabled: false` the MCP server (not delete yet), run the real workflows through the skill.
+5. Only after they pass, remove the server from `mcp.json`. Measure before/after with `tools/pi-cost`.
+
+Do not migrate blind: skills execute code on the agent's machine — install only from trusted
+sources (see skill `secret-leak-guard`).
 
 ## Checklist: wiring a new MCP server
 

@@ -63,7 +63,11 @@ Hard rules:
 Full rationale + sources: skill `mcp-usage` (`.pi/skills/mcp-usage/`).
 
 - **New capability → cheapest option first** (A13): skill / CLI script / small tool with README;
-  MCP only for external ecosystems (browser, DB, GitHub/Jira).
+  MCP only for external ecosystems (browser via a CDP script usually beats Playwright MCP;
+  DB, GitHub/Jira/Linear, OAuth with token refresh).
+- **MCP → skill migration** (recipe: skill `mcp-usage`): list servers actually used → find CLI/API
+  equivalent → write `SKILL.md` + scripts → `enabled: false` the server, run real workflows →
+  remove only after they pass. Skills run code on this machine: trusted sources only.
 - **Exposure is a cost decision**: default `deferred`; `direct` only for small always-on sets;
   `codemode` for batchable servers. Never `direct` for a large server — full schemas bloat the
   system prompt.
