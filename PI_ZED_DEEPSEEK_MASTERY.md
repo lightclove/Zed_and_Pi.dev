@@ -406,24 +406,20 @@ pi mcp add|remove|list|login|logout
 
 ### 5.1 Актуальный конфиг этого компьютера
 
-`~/.pi/agent/settings.json` (глобально, pi 1.1.0):
+`~/.pi/agent/settings.json` (глобально; версия сверена: `pi --version` → 1.4.0):
 
 ```jsonc
 {
   "theme": "dark",
-  "defaultModel": "deepseek-flash", // основная модель
-  "defaultThinkingLevel": "low", // reasoning-бюджет по умолчанию
+  "defaultModel": "deepseek/auto", // роутер, а не фиксированная модель
+  "defaultThinkingLevel": "low", // reasoning-бюджет по умолчанию (в pi — "medium")
   "showCacheMissNotices": true, // видеть промахи кэша
-  "defaultTools": [
-    "+bash",
-    "+grep",
-    "+find",
-    "+ls",
-    "+codemode",
-    "+tool_search",
-  ],
+  "defaultTools": ["+bash", "+grep", "+find", "+ls", "+codemode", "+tool_search"],
+  "packages": ["npm:@casualjim/pi-heimdall"]
 }
 ```
+
+(`lastChangelogVersion` в файле тоже есть — это служебная отметка, не настройка.)
 
 - Записи `+name` в `defaultTools` — **аддитивные**: добавляются к набору по умолчанию `read, bash, edit, write`.
   Итоговый набор: read, bash, edit, write, grep, find, ls, codemode, tool_search. Имя без `+` — заменяет весь набор.
@@ -432,29 +428,53 @@ pi mcp add|remove|list|login|logout
   `hideThinkingBlock`).
 - `/settings` — TUI-редактор частых опций; `pi config` — интерактивный TUI по ресурсам (для CI не годится).
 
-### 5.2 Полезные ключи по группам (полный список — `docs/settings.md`)
+### 5.2 Ключи настроек: что трогаем, что нет
 
-- **Модель/мышление:** `defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `modelThinkingLevels`,
-  `thinkingBudgets`, `enabledModels` (паттерны для стартового выбора и Ctrl+P-цикла), `hideThinkingBlock`,
-  `showCacheMissNotices`, `cacheWarming` (`off|streaming|idle`).
-- **Инструменты:** `defaultTools`, `codemode.mode`, `codemode.inlineBudget`.
-- **Компакция:** `compaction.enabled`, `compaction.reserveTokens` (16384), `compaction.keepRecentTokens`
-  (20000), `compaction.modelOverrides`, `branchSummary.reserveTokens`.
-- **Терминал:** `tuiMode` (`fullscreen|regular`), `fullscreenWheelScrollLines`, `fullscreenCopyOnSelect`,
-  `fullscreenScrollbar`, `theme`, `quietStartup`.
-- **Сеть/повторы (retry):** `transport`, `retry.enabled`, `retry.maxRetries` (3), `retry.provider.maxRetries`
-  (0 — оставь 0: квоты и лимиты тогда обрабатывает сам pi), `httpProxy`.
-- **Shell:** `shellPath`, `shellCommandPrefix`, `npmCommand`.
-- **Ресурсы:** `extensions`, `skills`, `prompts`, `themes`, `packages`, `enableSkillCommands`.
+Полный список с дефолтами — `docs/settings.md`. Здесь — только то, что реально решает что-то
+в этом проекте. Порядок — по цене ошибки, а не по алфавиту.
 
-### 5.3 DeepSeek + cacheWarming
+**Трогаем осознанно** (дефолты — из `docs/settings.md`, 1.4.0):
 
-`cacheWarming` (прогрев кэша в простое/потоке) работает только для моделей с объявленным `promptCache`
-(время жизни кэша в секундах) и только когда pi оценивает экономию от избегаемого промаха хотя бы в
-$0.05. У DeepSeek-моделей в каталоге `promptCache` нет — подогрев по умолчанию не активен.
-Сам автокэш DeepSeek работает и без этого. Если захочешь включить — задай консервативный TTL через
-`modelOverrides` в `models.json` (см. `docs/models.md`), но сначала проверь реальный TTL кэша DeepSeek
-в их документации.
+| Ключ | Дефолт | Почему важен |
+|---|---|---|
+| `defaultModel` | Automatic | какая модель стартует; `deepseek/auto` — роутер |
+| `defaultThinkingLevel` | `"medium"` | `"low"` для рутины: reasoning биллится как output |
+| `defaultTools` | `read,bash,edit,write` | `+name` добавляет, `-name` убирает, `[]` — ни одного |
+| `showCacheMissNotices` | `false` | единственный видимый сигнал промаха кэша = деньги |
+| `compaction.reserveTokens` | `16384` | порог авто-компакции; ниже — компакция раньше |
+| `retry.provider.maxRetries` | `0` | **оставить 0**: иначе pi перестаёт сам разбирать квоты и лимиты |
+| `enableSkillCommands` | `true` | `/skill:name` — принудительный запуск скилла в обход роутинга |
+
+**Не трогаем без причины** — дефолты уже осмысленные. Строка = группа, в скобках дефолт:
+
+- **Модели/мышление:** `defaultProvider` (авто), `enabledModels` (все; паттерны стартового выбора и Ctrl+P-цикла), `modelThinkingLevels` (нет), `thinkingBudgets` (встроенные), `hideThinkingBlock` (`false`), `cacheWarming` (`"streaming"` — см. 5.3).
+- **Инструменты:** `codemode.mode` (`"on"`), `codemode.inlineBudget` (`3000` токенов описаний в декларации codemode; что не влезло — через `searchTools()`).
+- **Компакция:** `compaction.enabled` (`true`), `compaction.keepRecentTokens` (`20000` — свежее не суммируется), `compaction.modelOverrides` (нет), `branchSummary.reserveTokens` (`16384`).
+- **Терминал:** `tuiMode` (`"fullscreen"`), `fullscreenWheelScrollLines` (`"auto"`), `fullscreenCopyOnSelect` (`true`), `fullscreenScrollbar` (`"auto"`), `quietStartup` (`false`).
+- **Сеть/повторы:** `transport` (`"auto"`), `retry.enabled` (`true`), `retry.maxRetries` (`3`), `httpProxy` (нет; только в agent-directory settings).
+- **Shell:** `shellPath` (платформенный), `shellCommandPrefix` (нет), `npmCommand` (`npm`).
+- **Ресурсы:** `packages`, `extensions`, `skills`, `prompts`, `themes` (все `[]`; у нас занят только `packages` → pi-heimdall).
+
+### 5.3 cacheWarming: почему у нас не работает и почему это не поломка
+
+Механика — по `docs/settings.md` и `docs/models.md`:
+
+- `cacheWarming`: `"off" | "streaming" | "idle"`, дефолт **`"streaming"`**. То есть «выключенным»
+  его никто не ставил — он включён, но не срабатывает.
+- Прогрев идёт только при двух условиях: модель объявляет время жизни кэша `promptCache` для
+  активного тира, и pi оценивает экономию от избегаемого промаха ≥ **$0.05**.
+- Прогрев не попадает в контекст модели, но **считается в расход сессии**. Следующее решение видно
+  в `/session`; расширение может его переопределить хуком `cache_warming_decision`.
+
+У DeepSeek `promptCache` нет: в `~/.pi/agent/models-store.json` поле отсутствует и у `deepseek-flash`,
+и у `deepseek-v4-pro` (проверено сканом JSON: `promptCache` → 0 вхождений). Поэтому прогрев для нас
+не активируется при любом значении настройки — и это ничего не ломает: автокэш DeepSeek работает и
+без прогрева, что видно по `cacheRead` в `pi-cost` (98–99% хитов в обычных сессиях).
+
+Если понадобится включить: TTL задаётся `modelOverrides` в `models.json` (`docs/models.md`,
+раздел Prompt Cache Lifetimes), брать **консервативный** конец диапазона. Сначала — реальный TTL из
+документации DeepSeek, потом настройка: при завышенном TTL прогрев начнёт платить за промахи вместо
+экономии.
 
 ## 6. Модели и деньги: DeepSeek, цены, кэш
 
