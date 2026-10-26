@@ -97,6 +97,8 @@ Layered defence + measured limits of each layer: skill `secret-leak-guard`.
 
 - `node tools/pi-cost/pi-cost.mjs [--today|--last N] [--top N] [--json]` — tokens/cost per session.
 - `node tools/skill-lint.mjs` — skill structure gate (see below).
+  Tests: `node --test tools/skill-lint.test.mjs` (17 contract cases, TDD — a check that cannot
+  be made to fail by a fixture is not a check).
 - `node templates/github-actions/scaffold-ci.mjs <target-dir> [--lang node|python|rust|go]`.
 
 ## Progressive disclosure

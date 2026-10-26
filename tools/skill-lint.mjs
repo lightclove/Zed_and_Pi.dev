@@ -14,6 +14,7 @@
  *   W1 `description` has a routing trigger ("Use when" / "when the task")
  *   W2 SKILL.md longer than MAX_SKILL_LINES (detail belongs in a reference)
  *   W3 reference longer than MAX_PLAIN_REF_LINES without a "## Index" (level-3 standard)
+ *   W4 frontmatter `name` differs from the skill directory name
  *
  * Exit code 1 on any error, 0 otherwise. Numbers, not opinions: it prints counts.
  */
@@ -47,7 +48,8 @@ function walk(dir) {
   return out;
 }
 
-function parseFrontmatter(text) {
+function parseFrontmatter(raw) {
+  const text = raw.replace(/^\uFEFF/, "");
   if (!text.startsWith("---")) return null;
   const end = text.indexOf("\n---", 3);
   if (end === -1) return null;
@@ -55,7 +57,9 @@ function parseFrontmatter(text) {
   const fm = {};
   for (const line of body.split("\n")) {
     const m = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line);
-    if (m) fm[m[1]] = m[2].trim();
+    if (!m) continue;
+    // Strip a single pair of surrounding quotes and the trailing CR of CRLF files.
+    fm[m[1]] = m[2].trim().replace(/\r$/, "").replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
   }
   return fm;
 }
@@ -67,7 +71,7 @@ function lintSkill(skillDir) {
     err("E1", `${label}: no SKILL.md`);
     return;
   }
-  const text = readFileSync(skillMd, "utf8");
+  const text = readFileSync(skillMd, "utf8").replace(/^\uFEFF/, "");
   const lines = text.split("\n").length;
   const fm = parseFrontmatter(text);
   if (!fm) {
@@ -78,7 +82,7 @@ function lintSkill(skillDir) {
     if (!fm[key]) err("E1", `${label}: frontmatter has no \`${key}\``);
   }
   if (fm.name && fm.name !== basename(skillDir)) {
-    warn("W1", `${label}: name \`${fm.name}\` != directory \`${basename(skillDir)}\``);
+    warn("W4", `${label}: name \`${fm.name}\` != directory \`${basename(skillDir)}\``);
   }
   if (fm.description && !TRIGGERS.some((re) => re.test(fm.description))) {
     warn("W1", `${label}: description has no routing trigger ("Use when ...")`);
